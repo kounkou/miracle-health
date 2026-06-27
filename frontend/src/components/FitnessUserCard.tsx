@@ -7,6 +7,7 @@ export interface FitnessForecast {
     error?: string | null;
     k1: number | null; // Fitness gain rate
     tau1: number | null; // Fitness decay rate
+    rmse: number | null; // Root Mean Square Error
 }
 
 interface UserCardProps {
@@ -15,9 +16,10 @@ interface UserCardProps {
     title: string;
     k1: number | null;
     tau1: number | null;
+    rmse: number | null;
 }
 
-export const FitnessUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k1, tau1 }) => {
+export const FitnessUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k1, tau1, rmse }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartJS | null>(null);
 
@@ -123,8 +125,12 @@ export const FitnessUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
                             <strong>{k1.toFixed(5)}</strong>
                         </div>
                         <div className="admin-user-card__stat">
-                            <span>Fitness Decay</span>
+                            <span>Decay</span>
                             <strong>{tau1.toFixed(0)} days</strong>
+                        </div>
+                        <div className="admin-user-card__stat">
+                            <span>Error</span>
+                            <strong>{rmse !== null ? rmse.toFixed(2) : " —"}</strong>
                         </div>
                     </div>
                 </>

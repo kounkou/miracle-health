@@ -15,9 +15,10 @@ interface UserCardProps {
     title: string;
     k2: number | null;
     tau2: number | null;
+    rmse: number | null;
 }
 
-export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k2, tau2 }) => {
+export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k2, tau2, rmse }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartJS | null>(null);
 
@@ -123,8 +124,12 @@ export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
                             <strong>{k2.toFixed(5)}</strong>
                         </div>
                         <div className="admin-user-card__stat">
-                            <span>Fatigue Decay</span>
+                            <span>Decay</span>
                             <strong>{tau2.toFixed(0)} days</strong>
+                        </div>
+                        <div className="admin-user-card__stat">
+                            <span>Error</span>
+                            <strong>{rmse !== null ? rmse.toFixed(2) : " —"}</strong>
                         </div>
                     </div>
                 </>

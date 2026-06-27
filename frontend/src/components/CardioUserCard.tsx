@@ -151,11 +151,11 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                             <strong>{formatDayOffset(forecast.nextHiitDay)}</strong>
                         </div>
                         <div className="admin-user-card__stat">
-                            <span>Next Zone 2</span>
+                            <span>Next Run</span>
                             <strong>{formatDayOffset(forecast.nextZone2Day)}</strong>
                         </div>
                         <div className="admin-user-card__stat">
-                            <span>Next Zone 1</span>
+                            <span>Next Walk</span>
                             <strong>{formatDayOffset(forecast.nextZone1Day)}</strong>
                         </div>
                     </div>

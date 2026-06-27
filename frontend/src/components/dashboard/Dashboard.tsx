@@ -122,6 +122,7 @@ interface FitnessForecast {
     error?: string | null;
     k1: number | null; // Fitness gain rate
     tau1: number | null; // Fitness decay rate
+    rmse: number | null; // Root Mean Square Error
 }
 
 interface FatigueForecast {
@@ -129,6 +130,7 @@ interface FatigueForecast {
     error?: string | null;
     k2: number | null; // Fatigue gain rate
     tau2: number | null; // Fatigue decay rate
+    rmse: number | null; // Root Mean Square Error
 }
 
 type Vo2maxThresholds = { lowMax: number; belowAvgMax: number; aboveAvgMax: number };
@@ -1312,6 +1314,7 @@ export default function Dashboard({
                 // labels: modelDataRef.current?.allLabels ?? [],
                 k1: modelDataRef.current?.k1 ?? 0,
                 tau1: modelDataRef.current?.tau1 ?? 0,
+                rmse: modelDataRef.current?.rmse1 ?? 0,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
 
@@ -1320,6 +1323,7 @@ export default function Dashboard({
                 // labels: modelDataRef.current?.allLabels ?? [],
                 k2: modelDataRef.current?.k2 ?? 0,
                 tau2: modelDataRef.current?.tau2 ?? 0,
+                rmse: modelDataRef.current?.rmse2 ?? 0,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
 
@@ -2528,8 +2532,8 @@ export default function Dashboard({
 
             <div className="admin-grid">
                 <CardioUserCard key={userForecast.email} forecast={userForecast} theme={theme} title="Cardio Fitness" />
-                <FitnessUserCard key={userForecast.email} forecast={fitnessForecast} theme={theme} title="Fitness" k1={fitnessForecast?.k1} tau1={fitnessForecast?.tau1} />
-                <FatigueUserCard key={userForecast.email} forecast={fatigueForecast} theme={theme} title="Fatigue" k2={fatigueForecast?.k2} tau2={fatigueForecast?.tau2} />
+                <FitnessUserCard key={userForecast.email} forecast={fitnessForecast} theme={theme} title="Fitness" k1={fitnessForecast?.k1} tau1={fitnessForecast?.tau1} rmse={fitnessForecast?.rmse} />
+                <FatigueUserCard key={userForecast.email} forecast={fatigueForecast} theme={theme} title="Fatigue" k2={fatigueForecast?.k2} tau2={fatigueForecast?.tau2} rmse={fatigueForecast?.rmse} />
 
                 <AdviceUserCard key={userForecast.email} theme={theme} title={`💡 Running Advice - ${zone2Duration.toFixed(0)}min`} blurb={
                     `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a moderate, 

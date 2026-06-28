@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Chart as ChartJS } from 'chart.js/auto';
+import WorkoutBadge from './WorkoutBadge';
 
 // 1. Define internal type signatures for your data layout matching the Go forecast structures
 export interface UserForecast {
@@ -10,6 +11,7 @@ export interface UserForecast {
     nextHiitDay: number | null;
     nextZone2Day: number | null;
     nextZone1Day: number | null;
+    vo2maxClass?: "Low" | "Below Average" | "Above Average" | "High";
     error?: string | null;
 }
 
@@ -131,9 +133,14 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
         <div className="admin-user-card">
             <div className="admin-user-card__header">
                 <span className="admin-user-card__title">{title}</span>
+                {forecast.vo2maxClass && (
+                    <span className={`admin-user-card__peak ${forecast.vo2maxClass.toLowerCase().replace(" ", "-")}`}>
+                        {forecast.vo2maxClass}
+                    </span>
+                )}
                 {forecast.peakVo2 !== null && (
                     <span className="admin-user-card__peak">
-                        Peak {forecast.peakVo2.toFixed(1)} mL/kg/min
+                        {forecast.peakVo2.toFixed(1)} VO₂max
                     </span>
                 )}
             </div>
@@ -156,6 +163,7 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                         </div>
                         <div className="admin-user-card__stat">
                             <span>Next Walk</span>
+                            {/* <WorkoutBadge workoutDate={formatDayOffset(forecast.nextZone1Day)} theme={theme} /> */}
                             <strong>{formatDayOffset(forecast.nextZone1Day)}</strong>
                         </div>
                     </div>

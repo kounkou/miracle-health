@@ -32,6 +32,7 @@ interface UserForecast {
     nextHiitDay: number | null;
     nextZone2Day: number | null;
     nextZone1Day: number | null;
+    vo2maxClass?: "Low" | "Below Average" | "Above Average" | "High";
     error?: string;
 }
 
@@ -118,6 +119,7 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
                                 labels,
                                 values,
                                 peakVo2: typeof fc.peakVo2 === "number" ? fc.peakVo2 : null,
+                                vo2maxClass: typeof fc.vo2maxClass === "string" ? fc.vo2maxClass : null,
                                 nextHiitDay: typeof ceiledNextHiitDay === "number" ? ceiledNextHiitDay : null,
                                 nextZone2Day: typeof ceiledNextZone2Day === "number" ? ceiledNextZone2Day : null,
                                 nextZone1Day: typeof ceiledNextZone1Day === "number" ? ceiledNextZone1Day : null,
@@ -128,6 +130,7 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
                                 labels: [],
                                 values: [],
                                 peakVo2: null,
+                                vo2maxClass: null,
                                 nextHiitDay: null,
                                 nextZone2Day: null,
                                 nextZone1Day: null,
@@ -146,6 +149,7 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
                                 labels: [],
                                 values: [],
                                 peakVo2: null,
+                                vo2maxClass: null,
                                 nextHiitDay: null,
                                 nextZone2Day: null,
                                 nextZone1Day: null,
@@ -177,7 +181,7 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
             {loading && (
                 <div className="admin-loading">
                     <span className="spinner large" />
-                    <span>Loading forecasts…</span>
+                    <span>Loading data…</span>
                 </div>
             )}
 
@@ -195,10 +199,14 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
                         .filter((fc) => fc.email !== 'kounkoujacques@hotmail.com')
                         .slice(0, forecasts.length - 1)
                         .map((fc) => (
-                            <CardioUserCard key={fc.email} forecast={fc} theme={theme} title="AdminDashboard" />
+                            <CardioUserCard key={fc.email} forecast={fc} theme={theme} title={fc.email} />
                         ))}
                 </div>
             )}
+            <div
+                className="admin-user-card__disclaimer">
+                <dd>© 2026 Miracle Health. All rights reserved.</dd>
+            </div>
         </div>
     );
 }

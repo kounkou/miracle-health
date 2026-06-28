@@ -114,6 +114,7 @@ interface UserForecast {
     nextHiitDay: number | null;
     nextZone2Day: number | null;
     nextZone1Day: number | null;
+    vo2maxClass?: "Low" | "Below Average" | "Above Average" | "High";
     error?: string;
 }
 
@@ -1073,6 +1074,27 @@ export default function Dashboard({
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
+    function getTodayZone2Duration(workoutsArr: Workout[]): number {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayZone2Workouts = workoutsArr.filter(w => w.date === today && w.workoutType === "zone2");
+        return todayZone2Workouts.reduce((total, w) => total + (w.workoutDuration || 0), 0);
+    }
+
+    function getTodayZone1Duration(workoutsArr: Workout[]): number {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayZone1Workouts = workoutsArr.filter(w => w.date === today && w.workoutType === "zone1");
+        return todayZone1Workouts.reduce((total, w) => total + (w.workoutDuration || 0), 0);
+    }
+
+    function formatDayOffset(daysAhead: number): string {
+        const daysAheadAsInt = daysAhead !== null ? Math.round(daysAhead) : null;
+        if (daysAheadAsInt === null) return "—";
+        if (daysAheadAsInt === 0) return "Today";
+        if (daysAheadAsInt === 1) return "Tomorrow";
+        if (daysAheadAsInt < 0) return "Overdue";
+        return `In ${daysAheadAsInt} days`;
+    }
+
     async function loadWorkouts(): Promise<Workout[]> {
         try {
             const data = await apiFetchWithAuth("/me/workouts", { headers: authHeader });
@@ -1293,14 +1315,17 @@ export default function Dashboard({
         try {
             const { isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals } = await computeForecastFromAPI(inputs, token, trainingModeRef.current);
 
+            const vo2maxClass = classifyVo2max(peakValue, getAge(dob), inputs.sex);
+
             setUserForecast({
-                email: "gkounkou@gmail.com",
+                email: email,
                 peakVo2: peakValue,
                 labels: labels,
                 values: actualPoints.map(p => p.y),
                 nextHiitDay: nextHiitDay,
                 nextZone2Day: nextZone2Day,
                 nextZone1Day: nextZone1Day,
+                vo2maxClass: vo2maxClass,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
 
@@ -2484,11 +2509,19 @@ export default function Dashboard({
         onThemeChange(theme === 'light' ? 'dark' : 'light');
     };
 
+    const forecastsWithIds = userForecast ? [userForecast, fitnessForecast, fatigueForecast].map((forecast, index) => ({
+        ...forecast,
+        id: index + 1, // Assign a unique ID based on the index
+    })) : [];
+
     if (!userForecast) {
         return (
             <div className="card animate-in dashboard">
                 <div className="admin-grid" style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-                    <div className="loading-spinner">Loading your athletic forecast...</div>
+                <div className="admin-loading">
+                    <span className="spinner large" />
+                    <span>Loading data…</span>
+                </div>
                 </div>
             </div>
         );
@@ -2498,14 +2531,18 @@ export default function Dashboard({
         <div className="card animate-in dashboard">
             {
                 !isOnboardingComplete && canDisplayOnboardingPopup && (
-                    <Onboarding
-                        theme="dark"
-                        sex={sex}
-                        setSex={setSex}
-                        dob={dob}
-                        setDob={setDob}
-                        onComplete={handleOnboardingSubmit}
-                    />
+                  <div className="modal-overlay">
+                    <div className="modal-content">
+                        <Onboarding
+                            theme="dark"
+                            sex={sex}
+                            setSex={setSex}
+                            dob={dob}
+                            setDob={setDob}
+                            onComplete={handleOnboardingSubmit}
+                        />
+                    </div>
+                </div>
                 )
             }
 
@@ -2531,24 +2568,45 @@ export default function Dashboard({
             </div>
 
             <div className="admin-grid">
-                <CardioUserCard key={userForecast.email} forecast={userForecast} theme={theme} title="Cardio Fitness" />
-                <FitnessUserCard key={userForecast.email} forecast={fitnessForecast} theme={theme} title="Fitness" k1={fitnessForecast?.k1} tau1={fitnessForecast?.tau1} rmse={fitnessForecast?.rmse} />
-                <FatigueUserCard key={userForecast.email} forecast={fatigueForecast} theme={theme} title="Fatigue" k2={fatigueForecast?.k2} tau2={fatigueForecast?.tau2} rmse={fatigueForecast?.rmse} />
+                <CardioUserCard key={1} forecast={userForecast} theme={theme} title="Cardio Fitness" />
+                <FitnessUserCard key={2} forecast={fitnessForecast} theme={theme} title="Fitness" k1={fitnessForecast?.k1} tau1={fitnessForecast?.tau1} rmse={fitnessForecast?.rmse} />
+                <FatigueUserCard key={3} forecast={fatigueForecast} theme={theme} title="Fatigue" k2={fatigueForecast?.k2} tau2={fatigueForecast?.tau2} rmse={fatigueForecast?.rmse} />
 
-                <AdviceUserCard key={userForecast.email} theme={theme} title={`💡 Running Advice - ${zone2Duration.toFixed(0)}min`} blurb={
-                    `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a moderate, 
-                     steady effort like a light jog or a brisk power walk. You can still talk, but you can only manage short sentences before needing a breath.`
+                <AdviceUserCard
+                    key={4}
+                    theme={theme}
+                    title={`💡 Running Advice - ${zone2Duration.toFixed(0)}min`}
+                    targetMinutes={formatDayOffset(userForecast.nextZone2Day) === "Today" ? Math.round(zone2Duration) : 0}
+                    accomplishedMinutes={(() => {
+                        // Calculate the total duration of Zone 2 workouts if Zone 2 workouts exist, otherwise return 0
+                        return getTodayZone2Duration(workouts) || 0;
+                    })()}
+                    blurb={
+                    `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day.
+                     Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`
                 } />
-                <AdviceUserCard key={userForecast.email} theme={theme} title={`💡 Walking Advice - ${zone1Duration.toFixed(0)}min`} blurb={
-                    `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes based on scheduled recommendation of walking or similar light activity. Zone 1 workouts 
-                     are very light, comfortable activities like a casual walk or an easy bike ride. In this zone, you can easily carry on a full conversation without catching your breath.`
+                <AdviceUserCard
+                    key={5}
+                    theme={theme}
+                    title={`💡 Walking Advice - ${zone1Duration.toFixed(0)}min`}
+                    targetMinutes={formatDayOffset(userForecast.nextZone1Day) === "Today" ? Math.round(zone1Duration) : 0}
+                    accomplishedMinutes={(() => {
+                        // Calculate the total duration of Zone 1 workouts if Zone 1 workouts exist, otherwise return 0
+                        return getTodayZone1Duration(workouts) || 0;
+                    })()}
+                    blurb={
+                    `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes of walking or similar light activity per day.
+                     Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.`
                 } />
 
-                <AdviceUserCard key={userForecast.email} theme={theme} title={`Disclaimer`} blurb={
-                    `The predictions and advice provided are based on the data you have entered and the model's calculations. Always consult with a healthcare professional or certified trainer 
-                     for personalized guidance. This application is for informational purposes only and should not be considered a substitute for professional medical advice, diagnosis, or treatment. 
-                     Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.`
-                } />
+                <AdviceUserCard
+                    key={6}
+                    theme={theme}
+                    title={`Disclaimer`}
+                    targetMinutes={0}
+                    accomplishedMinutes={0}
+                    blurb={`The predictions and advice provided are based on the data you have entered and model calculations. Consult a healthcare professional or certified trainer for
+                    personalized guidance. This application is for informational purposes only. Do not consider it a substitute for professional medical advice, diagnosis, or treatment.`} />
             </div>
             <div
                 className="admin-user-card__disclaimer">

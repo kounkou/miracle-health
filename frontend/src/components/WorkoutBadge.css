@@ -1,0 +1,57 @@
+.workout-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+/* Light Theme Styling */
+.workout-badge--light {
+  background-color: #f0fdf4; /* Light mint green */
+  color: #166534;            /* Deep forest green text */
+  border: 1px solid #bbf7d0;
+}
+
+/* Dark Theme Styling */
+.workout-badge--dark {
+  background-color: rgba(16, 185, 129, 0.15); /* Semi-transparent emerald */
+  color: #34d399;                              /* Bright emerald text */
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Pulsing Status Dot indicator */
+.workout-badge__dot {
+  width: 6px;
+  height: 6px;
+  background-color: #10b981;
+  border-radius: 50%;
+  position: relative;
+}
+
+.workout-badge__dot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: inherit;
+  animation: badge-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}

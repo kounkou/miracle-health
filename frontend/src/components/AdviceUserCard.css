@@ -1,0 +1,88 @@
+/* Core Layout Container */
+.admin-user-card {
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.admin-user-card.dark-theme {
+  background-color: #18181b;
+  color: #ffffff;
+}
+
+.admin-user-card__header {
+  margin-bottom: 12px;
+}
+
+.admin-user-card__title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* Flexible Body Layout */
+.admin-user-card__body {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.admin-user-card__blurb {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+/* Donut Chart Framing */
+.admin-user-card__donut-container {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.admin-user-card__donut-svg {
+  transform: rotate(-90deg);
+}
+
+.admin-user-card__donut-bg {
+  fill: transparent;
+  stroke-width: 8;
+  stroke: #e4e4e7; /* Light mode track */
+}
+
+.dark-theme .admin-user-card__donut-bg {
+  stroke: #27272a; /* Dark mode track */
+}
+
+.admin-user-card__donut-fill {
+  fill: transparent;
+  stroke: #0a84ff; /* Success Emerald Green */
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease-in-out;
+}
+
+/* Central Numeric Text Overlay */
+.admin-user-card__donut-text-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.admin-user-card__donut-percentage {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.admin-user-card__donut-fraction {
+  font-size: 9px;
+  font-weight: normal;
+  opacity: 0.7;
+}

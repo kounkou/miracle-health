@@ -18,6 +18,9 @@ export const AdviceUserCard: React.FC<AdviceUserCardProps> = ({
 }) => {
     const percentage = Math.min((accomplishedMinutes / (targetMinutes || 1)) * 100, 100);
 
+    // Evaluate if the donut target is 100% full
+    const isCompleted = accomplishedMinutes >= targetMinutes && targetMinutes > 0;
+
     // SVG Geometric Configurations
     const radius = 35;
     const circumference = 2 * Math.PI * radius;
@@ -28,7 +31,8 @@ export const AdviceUserCard: React.FC<AdviceUserCardProps> = ({
             <div className="admin-user-card__header">
                 <span className="admin-user-card__title">{title}</span>
                 {targetMinutes > 0 && (
-                    <div className="admin-user-card__donut-container">
+                    /* Appends the conditional 'is-completed' state modifier */
+                    <div className={`admin-user-card__donut-container ${isCompleted ? 'is-completed' : ''}`}>
                         <svg width="100%" height="100%" viewBox="0 0 90 90" className="admin-user-card__donut-svg">
                             <circle
                                 cx="45"
@@ -45,14 +49,6 @@ export const AdviceUserCard: React.FC<AdviceUserCardProps> = ({
                                 strokeDashoffset={strokeDashoffset}
                             />
                         </svg>
-                        {/* <div className="admin-user-card__donut-text-box">
-                            <span className="admin-user-card__donut-percentage">
-                                {Math.round(percentage)}%
-                            </span>
-                            <span className="admin-user-card__donut-fraction">
-                                {accomplishedMinutes}/{targetMinutes}m
-                            </span>
-                        </div> */}
                     </div>
                 )}
             </div>

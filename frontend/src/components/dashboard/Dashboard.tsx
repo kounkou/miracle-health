@@ -1075,13 +1075,13 @@ export default function Dashboard({
     }
 
     function getTodayZone2Duration(workoutsArr: Workout[]): number {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         const todayZone2Workouts = workoutsArr.filter(w => w.date === today && w.workoutType === "zone2");
         return todayZone2Workouts.reduce((total, w) => total + (w.workoutDuration || 0), 0);
     }
 
     function getTodayZone1Duration(workoutsArr: Workout[]): number {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         const todayZone1Workouts = workoutsArr.filter(w => w.date === today && w.workoutType === "zone1");
         return todayZone1Workouts.reduce((total, w) => total + (w.workoutDuration || 0), 0);
     }
@@ -1317,14 +1317,16 @@ export default function Dashboard({
 
             const vo2maxClass = classifyVo2max(peakValue, getAge(dob), inputs.sex);
 
+            console.log("Forecast next Zone 1 day:", Math.floor(nextZone1Day), "next Zone 2 day:", Math.floor(nextZone2Day), "next HIIT day:", Math.floor(nextHiitDay));
+
             setUserForecast({
                 email: email,
                 peakVo2: peakValue,
                 labels: labels,
                 values: actualPoints.map(p => p.y),
-                nextHiitDay: nextHiitDay,
-                nextZone2Day: nextZone2Day,
-                nextZone1Day: nextZone1Day,
+                nextHiitDay: Math.floor(nextHiitDay),
+                nextZone2Day: Math.floor(nextZone2Day),
+                nextZone1Day: Math.floor(nextZone1Day),
                 vo2maxClass: vo2maxClass,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
@@ -2568,9 +2570,27 @@ export default function Dashboard({
             </div>
 
             <div className="admin-grid">
-                <CardioUserCard key={1} forecast={userForecast} theme={theme} title="Cardio Fitness" />
-                <FitnessUserCard key={2} forecast={fitnessForecast} theme={theme} title="Fitness" k1={fitnessForecast?.k1} tau1={fitnessForecast?.tau1} rmse={fitnessForecast?.rmse} />
-                <FatigueUserCard key={3} forecast={fatigueForecast} theme={theme} title="Fatigue" k2={fatigueForecast?.k2} tau2={fatigueForecast?.tau2} rmse={fatigueForecast?.rmse} />
+                <CardioUserCard
+                    key={1}
+                    forecast={userForecast}
+                    theme={theme}
+                    title="Cardio Fitness" />
+                <FitnessUserCard
+                    key={2}
+                    forecast={fitnessForecast}
+                    theme={theme}
+                    title="Fitness"
+                    k1={fitnessForecast?.k1}
+                    tau1={fitnessForecast?.tau1}
+                    rmse={fitnessForecast?.rmse} />
+                <FatigueUserCard
+                    key={3}
+                    forecast={fatigueForecast}
+                    theme={theme}
+                    title="Fatigue"
+                    k2={fatigueForecast?.k2}
+                    tau2={fatigueForecast?.tau2}
+                    rmse={fatigueForecast?.rmse} />
 
                 <AdviceUserCard
                     key={4}

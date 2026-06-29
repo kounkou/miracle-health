@@ -104,6 +104,7 @@ interface ModelSignals {
     allDayBuckets: number[];
     allFitnessSignals: number[];
     allFatigueSignals: number[];
+    age: number;
 }
 
 interface UserForecast {
@@ -260,7 +261,7 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
         nextZone2Day: number | null;
         nextZone1Day: number | null;
         phaseBoundaries: { fatigueEnd: number; recoveryEnd: number; supercompEnd: number } | null;
-        modelSignals: ModelSignals
+        modelSignals: ModelSignals;
     }> {
     return (async () => {
         try {
@@ -376,6 +377,7 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
                     allDayBuckets,
                     allFitnessSignals,
                     allFatigueSignals,
+                    age: typeof forecast.age === "number" ? forecast.age : 30
                 }
             };
         } catch (err) {
@@ -1348,7 +1350,7 @@ function adjustForecastToLocalTime(NextHiitDay: number, NextZone2Day: number, Ne
         try {
             const { isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals } = await computeForecastFromAPI(inputs, token, trainingModeRef.current);
 
-            const vo2maxClass = classifyVo2max(peakValue, getAge(dob), inputs.sex);
+            const vo2maxClass = classifyVo2max(peakValue, modelSignals.age, inputs.sex);
             const adjustedForecast = adjustForecastToLocalTime(nextHiitDay, nextZone2Day, nextZone1Day);
 
             setUserForecast({

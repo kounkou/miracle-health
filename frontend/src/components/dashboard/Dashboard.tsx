@@ -471,15 +471,8 @@ export default function Dashboard({
     const [nextZone2DayState, setNextZone2Day] = useState<number | null>(null);
     const [nextZone1DayState, setNextZone1Day] = useState<number | null>(null);
 
-    const [sex, setSex] = useState<"male" | "female">(() => {
-        const s = localStorage.getItem("vo2max-sex");
-        return s === "female" ? "female" : "male";
-    });
-
-    const [dob, setDob] = useState<string>(() => {
-        const s = localStorage.getItem("vo2max-dob");
-        return s ? s : new Date().toISOString().slice(0, 10);
-    });
+    const [sex, setSex] = useState<"male" | "female">();
+    const [dob, setDob] = useState<string>();
 
     const [userForecast, setUserForecast] = useState<UserForecast | null>(null);
     const [fitnessForecast, setFitnessForecast] = useState<FitnessForecast | null>(null);
@@ -1348,6 +1341,18 @@ export default function Dashboard({
         setChartLoading(true);
         try {
             const { isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals } = await computeForecastFromAPI(inputs, token, trainingModeRef.current);
+
+            // set sex and dob in database if not already set
+            if (!inputs.dob || !inputs.sex) {
+                const updatedInputs: HealthInputs = {
+                    dob: inputs.dob || computedInputs.dob,
+                    sex: inputs.sex || computedInputs.sex,
+                };
+
+                console.log("Saving health inputs to database:", updatedInputs);
+
+                await saveHealthInputs(updatedInputs);
+            }
 
             const vo2maxClass = classifyVo2max(peakValue, modelSignals.age, inputs.sex);
             const adjustedForecast = adjustForecastToLocalTime(nextHiitDay, nextZone2Day, nextZone1Day);

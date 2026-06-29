@@ -1095,6 +1095,39 @@ export default function Dashboard({
         return `In ${daysAheadAsInt} days`;
     }
 
+function adjustForecastToLocalTime(NextHiitDay: number, NextZone2Day: number, NextZone1Day: number): { NextHiitDay: number; NextZone2Day: number; NextZone1Day: number } {
+    const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
+
+    // 1. Get midnight of today in UTC to establish the server's reference anchor
+    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    // 2. Get midnight of today in the client's local time zone
+    const localTodayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // Helper function to process each separate workout parameter safely
+    const calculateLocalDays = (serverDaysRemaining: number): number => {
+        // Find the absolute UTC timestamp of when the workout should happen
+        const targetUtcTimestamp = utcMidnight + (serverDaysRemaining * msPerDay);
+        const targetDate = new Date(targetUtcTimestamp);
+
+        // Convert that target timestamp into a clean midnight timestamp for the client's local day
+        const targetLocalMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+
+        // Calculate the physical calendar day difference for the local user
+        const realDaysRemaining = Math.round((targetLocalMidnight - localTodayMidnight) / msPerDay);
+
+        return Math.max(0, realDaysRemaining);
+    };
+
+    return {
+        NextHiitDay: calculateLocalDays(NextHiitDay),
+        NextZone2Day: calculateLocalDays(NextZone2Day),
+        NextZone1Day: calculateLocalDays(NextZone1Day)
+    };
+}
+
+
     async function loadWorkouts(): Promise<Workout[]> {
         try {
             const data = await apiFetchWithAuth("/me/workouts", { headers: authHeader });
@@ -1316,17 +1349,16 @@ export default function Dashboard({
             const { isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals } = await computeForecastFromAPI(inputs, token, trainingModeRef.current);
 
             const vo2maxClass = classifyVo2max(peakValue, getAge(dob), inputs.sex);
-
-            console.log("Forecast next Zone 1 day:", Math.floor(nextZone1Day), "next Zone 2 day:", Math.floor(nextZone2Day), "next HIIT day:", Math.floor(nextHiitDay));
+            const adjustedForecast = adjustForecastToLocalTime(nextHiitDay, nextZone2Day, nextZone1Day);
 
             setUserForecast({
                 email: email,
                 peakVo2: peakValue,
                 labels: labels,
                 values: actualPoints.map(p => p.y),
-                nextHiitDay: Math.floor(nextHiitDay),
-                nextZone2Day: Math.floor(nextZone2Day),
-                nextZone1Day: Math.floor(nextZone1Day),
+                nextHiitDay: Math.floor(adjustedForecast.NextHiitDay),
+                nextZone2Day: Math.floor(adjustedForecast.NextZone2Day),
+                nextZone1Day: Math.floor(adjustedForecast.NextZone1Day),
                 vo2maxClass: vo2maxClass,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
@@ -1373,8 +1405,8 @@ export default function Dashboard({
             setPeakDay(peakT);
             setPeakVo2(peakValue);
 
-            let ceiledNextHiitDay = Math.ceil(nextHiitDay);
-            let ceiledNextZone2Day = Math.ceil(nextZone2Day);
+            let ceiledNextHiitDay = Math.ceil(adjustedForecast.NextHiitDay);
+            let ceiledNextZone2Day = Math.ceil(adjustedForecast.NextZone2Day);
 
             ceiledNextHiitDay = Math.max(ceiledNextHiitDay, 0);
             ceiledNextZone2Day = Math.max(ceiledNextZone2Day, 0);

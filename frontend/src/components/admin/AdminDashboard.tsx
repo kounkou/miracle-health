@@ -36,6 +36,38 @@ interface UserForecast {
     error?: string;
 }
 
+function adjustForecastToLocalTime(NextHiitDay: number, NextZone2Day: number, NextZone1Day: number): { NextHiitDay: number; NextZone2Day: number; NextZone1Day: number } {
+    const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
+
+    // 1. Get midnight of today in UTC to establish the server's reference anchor
+    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    // 2. Get midnight of today in the client's local time zone
+    const localTodayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // Helper function to process each separate workout parameter safely
+    const calculateLocalDays = (serverDaysRemaining: number): number => {
+        // Find the absolute UTC timestamp of when the workout should happen
+        const targetUtcTimestamp = utcMidnight + (serverDaysRemaining * msPerDay);
+        const targetDate = new Date(targetUtcTimestamp);
+
+        // Convert that target timestamp into a clean midnight timestamp for the client's local day
+        const targetLocalMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+
+        // Calculate the physical calendar day difference for the local user
+        const realDaysRemaining = Math.round((targetLocalMidnight - localTodayMidnight) / msPerDay);
+
+        return Math.max(0, realDaysRemaining);
+    };
+
+    return {
+        NextHiitDay: calculateLocalDays(NextHiitDay),
+        NextZone2Day: calculateLocalDays(NextZone2Day),
+        NextZone1Day: calculateLocalDays(NextZone1Day)
+    };
+}
+
 export default function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
     const [users, setUsers] = useState<UserSummary[]>([]);
     const [forecasts, setForecasts] = useState<UserForecast[]>([]);
@@ -102,9 +134,11 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
                                 values.push(val);
                             }
 
-                            let ceiledNextHiitDay = Math.ceil(fc.nextHiitDay);
-                            let ceiledNextZone2Day = Math.ceil(fc.nextZone2Day);
-                            let ceiledNextZone1Day = Math.ceil(fc.nextZone1Day);
+                            const adjustedForecast = adjustForecastToLocalTime(fc.nextHiitDay, fc.nextZone2Day, fc.nextZone1Day);
+
+                            let ceiledNextHiitDay = Math.ceil(adjustedForecast.NextHiitDay);
+                            let ceiledNextZone2Day = Math.ceil(adjustedForecast.NextZone2Day);
+                            let ceiledNextZone1Day = Math.ceil(adjustedForecast.NextZone1Day);
 
                             ceiledNextHiitDay = Math.max(ceiledNextHiitDay, 0);
                             ceiledNextZone2Day = Math.max(ceiledNextZone2Day, 0);
@@ -181,7 +215,6 @@ export default function AdminDashboard({ token, onLogout }: AdminDashboardProps)
             {loading && (
                 <div className="admin-loading">
                     <span className="spinner large" />
-                    <span>Loading data…</span>
                 </div>
             )}
 

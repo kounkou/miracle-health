@@ -1097,38 +1097,37 @@ export default function Dashboard({
         return `In ${daysAheadAsInt} days`;
     }
 
-function adjustForecastToLocalTime(NextHiitDay: number, NextZone2Day: number, NextZone1Day: number): { NextHiitDay: number; NextZone2Day: number; NextZone1Day: number } {
-    const now = new Date();
-    const msPerDay = 24 * 60 * 60 * 1000;
+    function adjustForecastToLocalTime(NextHiitDay: number, NextZone2Day: number, NextZone1Day: number): { NextHiitDay: number; NextZone2Day: number; NextZone1Day: number } {
+        const now = new Date();
+        const msPerDay = 24 * 60 * 60 * 1000;
 
-    // 1. Get midnight of today in UTC to establish the server's reference anchor
-    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        // 1. Get midnight of today in UTC to establish the server's reference anchor
+        const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    // 2. Get midnight of today in the client's local time zone
-    const localTodayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        // 2. Get midnight of today in the client's local time zone
+        const localTodayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    // Helper function to process each separate workout parameter safely
-    const calculateLocalDays = (serverDaysRemaining: number): number => {
-        // Find the absolute UTC timestamp of when the workout should happen
-        const targetUtcTimestamp = utcMidnight + (serverDaysRemaining * msPerDay);
-        const targetDate = new Date(targetUtcTimestamp);
+        // Helper function to process each separate workout parameter safely
+        const calculateLocalDays = (serverDaysRemaining: number): number => {
+            // Find the absolute UTC timestamp of when the workout should happen
+            const targetUtcTimestamp = utcMidnight + (serverDaysRemaining * msPerDay);
+            const targetDate = new Date(targetUtcTimestamp);
 
-        // Convert that target timestamp into a clean midnight timestamp for the client's local day
-        const targetLocalMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+            // Convert that target timestamp into a clean midnight timestamp for the client's local day
+            const targetLocalMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
 
-        // Calculate the physical calendar day difference for the local user
-        const realDaysRemaining = Math.round((targetLocalMidnight - localTodayMidnight) / msPerDay);
+            // Calculate the physical calendar day difference for the local user
+            const realDaysRemaining = Math.round((targetLocalMidnight - localTodayMidnight) / msPerDay);
 
-        return Math.max(0, realDaysRemaining);
-    };
+            return Math.max(0, realDaysRemaining);
+        };
 
-    return {
-        NextHiitDay: calculateLocalDays(NextHiitDay),
-        NextZone2Day: calculateLocalDays(NextZone2Day),
-        NextZone1Day: calculateLocalDays(NextZone1Day)
-    };
-}
-
+        return {
+            NextHiitDay: calculateLocalDays(NextHiitDay),
+            NextZone2Day: calculateLocalDays(NextZone2Day),
+            NextZone1Day: calculateLocalDays(NextZone1Day)
+        };
+    }
 
     async function loadWorkouts(): Promise<Workout[]> {
         try {

@@ -20,6 +20,7 @@ import FatigueUserCard from "../FatigueUserCard";
 import FitnessUserCard from "../FitnessUserCard";
 import AdviceUserCard from "../AdviceUserCard";
 import Onboarding from "../Onboarding";
+import packageInfo from '../../../../package.json';
 
 ChartJS.register(
     LineController,
@@ -1349,8 +1350,6 @@ export default function Dashboard({
                     sex: inputs.sex || computedInputs.sex,
                 };
 
-                console.log("Saving health inputs to database:", updatedInputs);
-
                 await saveHealthInputs(updatedInputs);
             }
 
@@ -2668,7 +2667,7 @@ export default function Dashboard({
             </div>
             <div
                 className="admin-user-card__disclaimer">
-                <dd>© 2026 Miracle Health. All rights reserved.</dd>
+                <dd>© 2026 Miracle Health. All rights reserved. v{packageInfo.version}</dd>
             </div>
         </div>
     );

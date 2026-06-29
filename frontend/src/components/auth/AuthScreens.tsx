@@ -203,10 +203,10 @@ export function LoginForm({ onSwitch, onLogin }: { onSwitch: () => void; onLogin
                 </button>
             </form>
 
-            <p className="switch-text">
+            {/* <p className="switch-text">
                 No account?{" "}
                 <button className="link-btn" onClick={onSwitch}>Register</button>
-            </p>
+            </p> */}
         </div>
     );
 }

@@ -331,7 +331,7 @@ h3,
 
     margin: 0 auto 16px;
 
-    border-radius: 50%;
+    border-radius: 16px;
 
     background: rgba(110, 231, 183, 0.1);
 
@@ -593,7 +593,7 @@ button {
     left: 0;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 16px;
     padding: 16px;
     min-width: 200px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -659,7 +659,7 @@ button {
     appearance: none;
     width: 28px;
     height: 28px;
-    border-radius: 50%;
+    border-radius: 16px;
     background: var(--swatch);
     border: 2px solid var(--border-2);
     cursor: pointer;
@@ -826,7 +826,7 @@ button {
     position: absolute;
     inset: 1.5px;
     background: color-mix(in srgb, var(--surface) 100%, transparent);
-    border-radius: calc(16px - 1.5px);
+    border-radius: 16px;
     z-index: 1;
     pointer-events: none;
 }
@@ -958,7 +958,7 @@ button {
     display: inline-block;
     height: 14px;
     width: 86px;
-    border-radius: 999px;
+    border-radius: 16px;
     background: linear-gradient(90deg,
             color-mix(in srgb, var(--surface) 75%, var(--text) 25%) 20%,
             color-mix(in srgb, var(--surface) 55%, var(--text) 45%) 50%,
@@ -1311,7 +1311,7 @@ canvas {
 .type-badge {
     display: inline-block;
     padding: 6px 10px;
-    border-radius: 999px;
+    border-radius: 16px;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.4px;
@@ -1501,7 +1501,7 @@ select:focus,
     border: 2px solid rgba(255, 255, 255, 0.25);
     border-top-color: white;
 
-    border-radius: 50%;
+    border-radius: 16px;
 
     animation: spin 0.7s linear infinite;
 }
@@ -1768,7 +1768,7 @@ select:focus,
     .workout-modal {
         max-width: 100%;
         width: 100%;
-        border-radius: var(--radius) var(--radius) 0 0;
+        border-radius: 16px 16px 0 0;
         max-height: 92vh;
         padding: 20px 16px;
     }
@@ -1942,7 +1942,7 @@ select:focus,
 .profile-avatar {
     width: 60px;
     height: 60px;
-    border-radius: 50%;
+    border-radius: 16px;
     background-color: var(--surface-2);
     display: flex;
     align-items: center;
@@ -2067,7 +2067,7 @@ select:focus,
   box-sizing: border-box; /* Crucial: Includes padding inside width calculation */
   padding: 8px 0px;
   border: 1px solid #3f3f46; /* Optional border to make them match visually */
-  border-radius: 6px;
+  border-radius: 16px;
   text-align: center;
   text-align-last: center;
 }
@@ -2090,7 +2090,7 @@ select.plain-input {
 .workout-modal {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 16px;
     padding: 24px;
     width: 100%;
     max-width: 550px;
@@ -2256,7 +2256,7 @@ select.plain-input {
     position: relative;
     display: flex;
     height: 12px;
-    border-radius: 6px;
+    border-radius: 16px;
     overflow: hidden;
 }
 
@@ -2441,7 +2441,7 @@ select.plain-input {
 .admin-user-card {
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 16px;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -2682,7 +2682,7 @@ select.plain-input {
 /* --- Base Card Container Layout --- */
 /* .admin-user-card {
     padding: 16px;
-    border-radius: 12px;
+    border-radius: 16px;
     background-color: var(--card-bg, #fff);
 } */
 
@@ -2755,7 +2755,7 @@ select.plain-input {
     background: none;
     border: 1px solid var(--border-color);
     padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
+    border-radius: 16px;
     cursor: pointer;
     font-size: 0.875rem;
     color: var(--text-main);

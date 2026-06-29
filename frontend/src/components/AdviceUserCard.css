@@ -1,13 +1,24 @@
 /* Core Layout Container */
 .admin-user-card {
-  border-radius: 8px;
-  padding: 16px;
-  box-sizing: border-box;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.15s;
 }
 
 .admin-user-card.dark-theme {
-  background-color: #18181b;
-  color: #ffffff;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.15s;
 }
 
 .admin-user-card__header {
@@ -52,7 +63,7 @@
 }
 
 .dark-theme .admin-user-card__donut-bg {
-  stroke: #27272a; /* Dark mode track */
+  stroke: #4a4a4d; /* Dark mode track */
 }
 
 .admin-user-card__donut-fill {
@@ -90,7 +101,7 @@
 /* State: 100% Completed Donut */
 .admin-user-card__donut-container.is-completed {
   background-color: #10b981; /* Success Emerald Green */
-  border-radius: 50%;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -138,22 +138,6 @@ interface FatigueForecast {
 
 type Vo2maxThresholds = { lowMax: number; belowAvgMax: number; aboveAvgMax: number };
 
-function getVo2maxThresholds(ageVal: number, sexVal: "male" | "female"): Vo2maxThresholds {
-    if (sexVal === "female") {
-        if (ageVal < 30) return { lowMax: 29, belowAvgMax: 37, aboveAvgMax: 46 };
-        if (ageVal < 40) return { lowMax: 24, belowAvgMax: 29, aboveAvgMax: 37 };
-        if (ageVal < 50) return { lowMax: 21, belowAvgMax: 26, aboveAvgMax: 33 };
-        if (ageVal < 60) return { lowMax: 19, belowAvgMax: 22, aboveAvgMax: 28 };
-        return { lowMax: 15, belowAvgMax: 19, aboveAvgMax: 24 };
-    }
-    // male (ACSM norms)
-    if (ageVal < 30) return { lowMax: 33, belowAvgMax: 42, aboveAvgMax: 51 };
-    if (ageVal < 40) return { lowMax: 34, belowAvgMax: 42, aboveAvgMax: 49 };
-    if (ageVal < 50) return { lowMax: 29, belowAvgMax: 37, aboveAvgMax: 45 };
-    if (ageVal < 60) return { lowMax: 25, belowAvgMax: 35, aboveAvgMax: 41 };
-    return { lowMax: 23, belowAvgMax: 32, aboveAvgMax: 37 };
-}
-
 function generateDynamicHIITSegments(params) {
     // --- FIX: DYNAMIC WORK DURATION BASED ON ATHLETE PROFILE ---
     // If fatigue outweighs fitness heavily (> 3.0), they are an "Endurance/Slow Recovery" profile.
@@ -217,10 +201,33 @@ function generateDynamicHIITSegments(params) {
     return summaryData;
 }
 
-/*
-    Zone 2 Duration: Base of 60 minutes, scaled by the ratio of fitness to fatigue (k1/k2) and recovery speed (tau1/tau2).
-    Zone 1 Duration: Base of 60 minutes, scaled by the recovery capacity, which is influenced by both the fitness-to-fatigue ratio and the recovery speed ratio.
-*/
+function PasswordInput({
+    icon,
+    visible,
+    onToggleVisibility,
+    ...props
+}: {
+    icon: React.ReactNode;
+    visible: boolean;
+    onToggleVisibility: () => void;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+    return (
+        <div className="input-wrap password-wrap">
+            <span className="input-icon">{icon}</span>
+            <input {...props} type={visible ? "text" : "password"} />
+            <button
+                type="button"
+                className="password-toggle"
+                onClick={onToggleVisibility}
+                aria-label={visible ? "Hide password" : "Show password"}
+                aria-pressed={visible}
+            >
+                {visible ? "Hide" : "Show"}
+            </button>
+        </div>
+    );
+}
+
 function calculateZone1Duration(params) {
     if (params.k1 <= 0 || params.k2 <= 0 || params.tau1 <= 0 || params.tau2 <= 0) {
         return 60;
@@ -248,7 +255,23 @@ function classifyVo2max(vo2maxVal: number, ageVal: number, sexVal: "male" | "fem
     return "Low";
 }
 
-function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMode: "Wellness" | "Maintenance" | "Athletic Building")
+function getVo2maxThresholds(ageVal: number, sexVal: "male" | "female"): Vo2maxThresholds {
+    if (sexVal === "female") {
+        if (ageVal < 30) return { lowMax: 29, belowAvgMax: 37, aboveAvgMax: 46 };
+        if (ageVal < 40) return { lowMax: 24, belowAvgMax: 29, aboveAvgMax: 37 };
+        if (ageVal < 50) return { lowMax: 21, belowAvgMax: 26, aboveAvgMax: 33 };
+        if (ageVal < 60) return { lowMax: 19, belowAvgMax: 22, aboveAvgMax: 28 };
+        return { lowMax: 15, belowAvgMax: 19, aboveAvgMax: 24 };
+    }
+    // male (ACSM norms)
+    if (ageVal < 30) return { lowMax: 33, belowAvgMax: 42, aboveAvgMax: 51 };
+    if (ageVal < 40) return { lowMax: 34, belowAvgMax: 42, aboveAvgMax: 49 };
+    if (ageVal < 50) return { lowMax: 29, belowAvgMax: 37, aboveAvgMax: 45 };
+    if (ageVal < 60) return { lowMax: 25, belowAvgMax: 35, aboveAvgMax: 41 };
+    return { lowMax: 23, belowAvgMax: 32, aboveAvgMax: 37 };
+}
+
+function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMode: "Wellness" | "Maintenance" | "Athletic Building", localTimezone: string)
     : Promise<{
         isLockedOut: boolean;
         resetSeconds: number;
@@ -272,7 +295,7 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ healthInputs: inputs, trainingMode }),
+                body: JSON.stringify({ healthInputs: inputs, trainingMode, localTimezone }),
             });
 
             const isLockedOut = response.headers.get("X-RateLimit-Lockout") === "true";
@@ -386,33 +409,6 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
             throw err;
         }
     })();
-}
-
-function PasswordInput({
-    icon,
-    visible,
-    onToggleVisibility,
-    ...props
-}: {
-    icon: React.ReactNode;
-    visible: boolean;
-    onToggleVisibility: () => void;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
-    return (
-        <div className="input-wrap password-wrap">
-            <span className="input-icon">{icon}</span>
-            <input {...props} type={visible ? "text" : "password"} />
-            <button
-                type="button"
-                className="password-toggle"
-                onClick={onToggleVisibility}
-                aria-label={visible ? "Hide password" : "Show password"}
-                aria-pressed={visible}
-            >
-                {visible ? "Hide" : "Show"}
-            </button>
-        </div>
-    );
 }
 
 export default function Dashboard({
@@ -1098,8 +1094,8 @@ export default function Dashboard({
         // 1. Get midnight of today in UTC to establish the server's reference anchor
         const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-        // 2. Get midnight of today in the client's local time zone
-        const localTodayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        // 2. Get midnight of today in the client's local time zone, but extract it as a UTC anchor
+        const localTodayInUtcMidnight = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 
         // Helper function to process each separate workout parameter safely
         const calculateLocalDays = (serverDaysRemaining: number): number => {
@@ -1107,11 +1103,16 @@ export default function Dashboard({
             const targetUtcTimestamp = utcMidnight + (serverDaysRemaining * msPerDay);
             const targetDate = new Date(targetUtcTimestamp);
 
-            // Convert that target timestamp into a clean midnight timestamp for the client's local day
-            const targetLocalMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+            // Extract the absolute year/month/date according to UTC coordinates
+            // and build a matching absolute UTC midnight anchor
+            const targetLocalInUtcMidnight = Date.UTC(
+                targetDate.getUTCFullYear(),
+                targetDate.getUTCMonth(),
+                targetDate.getUTCDate()
+            );
 
-            // Calculate the physical calendar day difference for the local user
-            const realDaysRemaining = Math.round((targetLocalMidnight - localTodayMidnight) / msPerDay);
+            // Calculate the physical calendar day difference cleanly in a unified UTC scale
+            const realDaysRemaining = Math.round((targetLocalInUtcMidnight - localTodayInUtcMidnight) / msPerDay);
 
             return Math.max(0, realDaysRemaining);
         };
@@ -1339,9 +1340,26 @@ export default function Dashboard({
     }
 
     async function runCompute(inputs: HealthInputs, workoutsParam?: Workout[]) {
+
+        const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
         setChartLoading(true);
         try {
-            const { isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals } = await computeForecastFromAPI(inputs, token, trainingModeRef.current);
+            const {
+                isLockedOut,
+                resetSeconds,
+                labels,
+                dayBuckets,
+                actualPoints,
+                workoutTypeLabels,
+                peakValue,
+                peakT,
+                nextHiitDay,
+                nextZone2Day,
+                nextZone1Day,
+                phaseBoundaries,
+                modelSignals
+            } = await computeForecastFromAPI(inputs, token, trainingModeRef.current, localTimezone);
 
             // set sex and dob in database if not already set
             if (!inputs.dob || !inputs.sex) {
@@ -1354,16 +1372,15 @@ export default function Dashboard({
             }
 
             const vo2maxClass = classifyVo2max(peakValue, modelSignals.age, inputs.sex);
-            const adjustedForecast = adjustForecastToLocalTime(nextHiitDay, nextZone2Day, nextZone1Day);
 
             setUserForecast({
                 email: email,
                 peakVo2: peakValue,
                 labels: labels,
                 values: actualPoints.map(p => p.y),
-                nextHiitDay: Math.floor(adjustedForecast.NextHiitDay),
-                nextZone2Day: Math.floor(adjustedForecast.NextZone2Day),
-                nextZone1Day: Math.floor(adjustedForecast.NextZone1Day),
+                nextHiitDay: Math.floor(nextHiitDay),
+                nextZone2Day: Math.floor(nextZone2Day),
+                nextZone1Day: Math.floor(nextZone1Day),
                 vo2maxClass: vo2maxClass,
                 error: isLockedOut ? `Rate limit exceeded. Please wait ${resetSeconds} seconds before trying again.` : null,
             });
@@ -1410,8 +1427,8 @@ export default function Dashboard({
             setPeakDay(peakT);
             setPeakVo2(peakValue);
 
-            let ceiledNextHiitDay = Math.ceil(adjustedForecast.NextHiitDay);
-            let ceiledNextZone2Day = Math.ceil(adjustedForecast.NextZone2Day);
+            let ceiledNextHiitDay = Math.ceil(nextHiitDay);
+            let ceiledNextZone2Day = Math.ceil(nextZone2Day);
 
             ceiledNextHiitDay = Math.max(ceiledNextHiitDay, 0);
             ceiledNextZone2Day = Math.max(ceiledNextZone2Day, 0);
@@ -2635,12 +2652,15 @@ export default function Dashboard({
                     title={`💡 Running Advice - ${zone2Duration.toFixed(0)}min`}
                     targetMinutes={formatDayOffset(userForecast.nextZone2Day) === "Today" ? Math.round(zone2Duration) : 0}
                     accomplishedMinutes={(() => {
-                        // Calculate the total duration of Zone 2 workouts if Zone 2 workouts exist, otherwise return 0
                         return getTodayZone2Duration(workouts) || 0;
                     })()}
                     blurb={
                     `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day.
-                     Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`
+                    Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.
+                    ${formatDayOffset(userForecast.nextZone2Day) === "Today"
+                        ? `You have run about ${getTodayZone2Duration(workouts) || 0}min, keep going!`
+                        : ""
+                    }`
                 } />
                 <AdviceUserCard
                     key={5}
@@ -2653,7 +2673,11 @@ export default function Dashboard({
                     })()}
                     blurb={
                     `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes of walking or similar light activity per day.
-                     Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.`
+                     Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.
+                      ${formatDayOffset(userForecast.nextZone1Day) === "Today"
+                        ? `You have walked about ${getTodayZone1Duration(workouts).toFixed(0) || 0}min, keep going!`
+                        : ""
+                    }`
                 } />
 
                 <AdviceUserCard

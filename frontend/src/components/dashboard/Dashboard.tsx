@@ -2658,7 +2658,7 @@ export default function Dashboard({
                     `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day.
                     Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.
                     ${formatDayOffset(userForecast.nextZone2Day) === "Today"
-                        ? `You have run about ${getTodayZone2Duration(workouts) || 0}min, keep going!`
+                        ? `You have run about ${getTodayZone2Duration(workouts).toFixed(0) || 0}min, keep going!`
                         : ""
                     }`
                 } />

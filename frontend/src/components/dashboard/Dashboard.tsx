@@ -271,6 +271,8 @@ function getVo2maxThresholds(ageVal: number, sexVal: "male" | "female"): Vo2maxT
     return { lowMax: 23, belowAvgMax: 32, aboveAvgMax: 37 };
 }
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMode: "Wellness" | "Maintenance" | "Athletic Building", localTimezone: string)
     : Promise<{
         isLockedOut: boolean;
@@ -288,125 +290,145 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
         modelSignals: ModelSignals;
     }> {
     return (async () => {
-        try {
-            const response = await fetch(`${API}/me/forecast`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ healthInputs: inputs, trainingMode, localTimezone }),
-            });
+        let retries = 3, baseDelayMs = 1000, maxDelayMs = 8000;
 
-            const isLockedOut = response.headers.get("X-RateLimit-Lockout") === "true";
-            const resetSeconds = parseInt(response.headers.get("X-RateLimit-Reset") || "300", 10);
+        let currentDelay = baseDelayMs;
 
-            if (!response.ok) {
-                throw new Error(`Forecast API failed with status ${response.status}`);
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const response = await fetch(`${API}/me/forecast`, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ healthInputs: inputs, trainingMode, localTimezone }),
+                });
+
+                const isLockedOut = response.headers.get("X-RateLimit-Lockout") === "true";
+                const resetSeconds = parseInt(response.headers.get("X-RateLimit-Reset") || "300", 10);
+
+                if (!response.ok) {
+                    throw new Error(`Forecast API failed with status ${response.status}`);
+                }
+
+                const forecast = await response.json();
+                const labels: string[] = [];
+                const dayBuckets: number[] = [];
+                const actualPoints: { x: number; y: number }[] = [];
+                const workoutTypeLabels: string[] = [];
+                const seenDayBuckets = new Set<number>();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let peakValue = Number(forecast.peakVo2);
+                let peakT = Number(forecast.peakDay);
+                const nextHiitDay = typeof forecast.nextHiitDay === "number" && Number.isFinite(forecast.nextHiitDay) ? Number(forecast.nextHiitDay) : null;
+                const nextZone2Day = typeof forecast.nextZone2Day === "number" && Number.isFinite(forecast.nextZone2Day) ? Number(forecast.nextZone2Day) : null;
+                const nextZone1Day = typeof forecast.nextZone1Day === "number" && Number.isFinite(forecast.nextZone1Day) ? Number(forecast.nextZone1Day) : null;
+                const phaseBoundariesRaw = forecast.phaseBoundaries;
+                const phaseBoundaries = phaseBoundariesRaw &&
+                    typeof phaseBoundariesRaw.fatigueEnd === "number" && Number.isFinite(phaseBoundariesRaw.fatigueEnd) &&
+                    typeof phaseBoundariesRaw.recoveryEnd === "number" && Number.isFinite(phaseBoundariesRaw.recoveryEnd) &&
+                    typeof phaseBoundariesRaw.supercompEnd === "number" && Number.isFinite(phaseBoundariesRaw.supercompEnd)
+                    ? {
+                        fatigueEnd: Number(phaseBoundariesRaw.fatigueEnd),
+                        recoveryEnd: Number(phaseBoundariesRaw.recoveryEnd),
+                        supercompEnd: Number(phaseBoundariesRaw.supercompEnd),
+                    }
+                    : null;
+
+                for (const point of forecast.points) {
+                    const day = Number(point.day);
+                    const actualRaw = point.actual;
+                    const hasActual = typeof actualRaw === "number" && Number.isFinite(actualRaw);
+                    const dayBucket = Math.round(day);
+
+                    if (!hasActual && dayBucket !== 0 && (dayBucket < 1 || dayBucket > 3)) {
+                        continue;
+                    }
+
+                    if (seenDayBuckets.has(dayBucket)) {
+                        continue;
+                    }
+                    seenDayBuckets.add(dayBucket);
+
+                    const labelDate = new Date(today);
+                    labelDate.setDate(today.getDate() + dayBucket);
+                    const label = dayBucket === 0
+                        ? "Today"
+                        : labelDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+                    const xIndex = labels.length;
+                    labels.push(label);
+                    dayBuckets.push(dayBucket);
+                    const pointWorkoutType = typeof point.workoutTypeLabel === "string" ? point.workoutTypeLabel.trim() : "";
+                    workoutTypeLabels.push(pointWorkoutType);
+                    if (hasActual) {
+                        actualPoints.push({ x: xIndex, y: actualRaw });
+                    }
+                }
+
+                // Build dense model signal arrays (every day in the forecast window)
+                const allLabels: string[] = [];
+                const allDayBuckets: number[] = [];
+                const allFitnessSignals: number[] = [];
+                const allFatigueSignals: number[] = [];
+                const seenModelDays = new Set<number>();
+                for (const point of forecast.points) {
+                    const dayBucket = Math.round(Number(point.day));
+                    if (dayBucket > 0) continue; // only up to today
+                    if (seenModelDays.has(dayBucket)) continue;
+                    seenModelDays.add(dayBucket);
+                    const labelDate = new Date(today);
+                    labelDate.setDate(today.getDate() + dayBucket);
+                    const label = dayBucket === 0 ? "Today" : labelDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    allLabels.push(label);
+                    allDayBuckets.push(dayBucket);
+                    allFitnessSignals.push(typeof point.fitnessSignal === "number" ? point.fitnessSignal : 0);
+                    allFatigueSignals.push(typeof point.fatigueSignal === "number" ? point.fatigueSignal : 0);
+                }
+
+                // if (!Number.isFinite(peakValue)) {
+                //     peakValue = inputs.vo2max;
+                // }
+                if (!Number.isFinite(peakT) || peakT <= 0) {
+                    peakT = 1;
+                }
+
+                return {
+                    isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals: {
+                        tau1: typeof forecast.tau1 === "number" ? forecast.tau1 : 35,
+                        tau2: typeof forecast.tau2 === "number" ? forecast.tau2 : 7,
+                        k1: typeof forecast.k1 === "number" ? forecast.k1 : 0.02,
+                        k2: typeof forecast.k2 === "number" ? forecast.k2 : 0.06,
+                        rmse1: typeof forecast.rmse1 === "number" ? forecast.rmse1 : 0,
+                        rmse2: typeof forecast.rmse2 === "number" ? forecast.rmse2 : 0,
+                        allLabels,
+                        allDayBuckets,
+                        allFitnessSignals,
+                        allFatigueSignals,
+                        age: typeof forecast.age === "number" ? forecast.age : 30
+                    }
+                };
+            } catch (err) {
+                const isLastAttempt = attempt == retries;
+
+                if (isLastAttempt) {
+                    // Out of attempts, bubble up the final error to the UI handler
+                    throw err;
+                }
+
+                const exponentialBackoff = Math.min(maxDelayMs, currentDelay * Math.pow(2, attempt - 1));
+
+                // 2. Introduce a random value between 0 and the maximum exponential window bounds
+                const fullJitterDelay = Math.random() * exponentialBackoff;
+
+                console.warn(`Attempt ${attempt} failed: ${err}. Retrying in ${Math.round(fullJitterDelay)}ms...`);
+
+                // 3. Wait out the randomized window interval
+                await delay(fullJitterDelay);
             }
-
-            const forecast = await response.json();
-            const labels: string[] = [];
-            const dayBuckets: number[] = [];
-            const actualPoints: { x: number; y: number }[] = [];
-            const workoutTypeLabels: string[] = [];
-            const seenDayBuckets = new Set<number>();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            let peakValue = Number(forecast.peakVo2);
-            let peakT = Number(forecast.peakDay);
-            const nextHiitDay = typeof forecast.nextHiitDay === "number" && Number.isFinite(forecast.nextHiitDay) ? Number(forecast.nextHiitDay) : null;
-            const nextZone2Day = typeof forecast.nextZone2Day === "number" && Number.isFinite(forecast.nextZone2Day) ? Number(forecast.nextZone2Day) : null;
-            const nextZone1Day = typeof forecast.nextZone1Day === "number" && Number.isFinite(forecast.nextZone1Day) ? Number(forecast.nextZone1Day) : null;
-            const phaseBoundariesRaw = forecast.phaseBoundaries;
-            const phaseBoundaries = phaseBoundariesRaw &&
-                typeof phaseBoundariesRaw.fatigueEnd === "number" && Number.isFinite(phaseBoundariesRaw.fatigueEnd) &&
-                typeof phaseBoundariesRaw.recoveryEnd === "number" && Number.isFinite(phaseBoundariesRaw.recoveryEnd) &&
-                typeof phaseBoundariesRaw.supercompEnd === "number" && Number.isFinite(phaseBoundariesRaw.supercompEnd)
-                ? {
-                    fatigueEnd: Number(phaseBoundariesRaw.fatigueEnd),
-                    recoveryEnd: Number(phaseBoundariesRaw.recoveryEnd),
-                    supercompEnd: Number(phaseBoundariesRaw.supercompEnd),
-                }
-                : null;
-
-            for (const point of forecast.points) {
-                const day = Number(point.day);
-                const actualRaw = point.actual;
-                const hasActual = typeof actualRaw === "number" && Number.isFinite(actualRaw);
-                const dayBucket = Math.round(day);
-
-                if (!hasActual && dayBucket !== 0 && (dayBucket < 1 || dayBucket > 3)) {
-                    continue;
-                }
-
-                if (seenDayBuckets.has(dayBucket)) {
-                    continue;
-                }
-                seenDayBuckets.add(dayBucket);
-
-                const labelDate = new Date(today);
-                labelDate.setDate(today.getDate() + dayBucket);
-                const label = dayBucket === 0
-                    ? "Today"
-                    : labelDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-                const xIndex = labels.length;
-                labels.push(label);
-                dayBuckets.push(dayBucket);
-                const pointWorkoutType = typeof point.workoutTypeLabel === "string" ? point.workoutTypeLabel.trim() : "";
-                workoutTypeLabels.push(pointWorkoutType);
-                if (hasActual) {
-                    actualPoints.push({ x: xIndex, y: actualRaw });
-                }
-            }
-
-            // Build dense model signal arrays (every day in the forecast window)
-            const allLabels: string[] = [];
-            const allDayBuckets: number[] = [];
-            const allFitnessSignals: number[] = [];
-            const allFatigueSignals: number[] = [];
-            const seenModelDays = new Set<number>();
-            for (const point of forecast.points) {
-                const dayBucket = Math.round(Number(point.day));
-                if (dayBucket > 0) continue; // only up to today
-                if (seenModelDays.has(dayBucket)) continue;
-                seenModelDays.add(dayBucket);
-                const labelDate = new Date(today);
-                labelDate.setDate(today.getDate() + dayBucket);
-                const label = dayBucket === 0 ? "Today" : labelDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                allLabels.push(label);
-                allDayBuckets.push(dayBucket);
-                allFitnessSignals.push(typeof point.fitnessSignal === "number" ? point.fitnessSignal : 0);
-                allFatigueSignals.push(typeof point.fatigueSignal === "number" ? point.fatigueSignal : 0);
-            }
-
-            // if (!Number.isFinite(peakValue)) {
-            //     peakValue = inputs.vo2max;
-            // }
-            if (!Number.isFinite(peakT) || peakT <= 0) {
-                peakT = 1;
-            }
-
-            return {
-                isLockedOut, resetSeconds, labels, dayBuckets, actualPoints, workoutTypeLabels, peakValue, peakT, nextHiitDay, nextZone2Day, nextZone1Day, phaseBoundaries, modelSignals: {
-                    tau1: typeof forecast.tau1 === "number" ? forecast.tau1 : 35,
-                    tau2: typeof forecast.tau2 === "number" ? forecast.tau2 : 7,
-                    k1: typeof forecast.k1 === "number" ? forecast.k1 : 0.02,
-                    k2: typeof forecast.k2 === "number" ? forecast.k2 : 0.06,
-                    rmse1: typeof forecast.rmse1 === "number" ? forecast.rmse1 : 0,
-                    rmse2: typeof forecast.rmse2 === "number" ? forecast.rmse2 : 0,
-                    allLabels,
-                    allDayBuckets,
-                    allFitnessSignals,
-                    allFatigueSignals,
-                    age: typeof forecast.age === "number" ? forecast.age : 30
-                }
-            };
-        } catch (err) {
-            console.error("Forecast API error:", err);
-            throw err;
         }
     })();
 }

@@ -107,7 +107,7 @@ export const FitnessUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
                 <span className="admin-user-card__title">{title}</span>
                 {forecast.values !== null && (
                     <span className="admin-user-card__peak">
-                        Current {forecast.values[forecast.values.length - 1].toFixed(1)}
+                        Current {forecast.values[forecast.values.length - 1].toFixed(3)}
                     </span>
                 )}
             </div>

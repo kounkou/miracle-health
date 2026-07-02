@@ -98,30 +98,33 @@
   opacity: 0.7;
 }
 
-/* State: 100% Completed Donut */
-.admin-user-card__donut-container.is-completed {
-  background-color: #10b981; /* Success Emerald Green */
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.admin-user-card__header {
+  /* lock the header's own height so a bigger donut can't stretch it */
+  position: relative;
+  height: 48px; /* set this to whatever your current header height is */
+  overflow: visible;
 }
 
-/* Hide the original SVG and text when completed */
-.admin-user-card__donut-container.is-completed .admin-user-card__donut-svg,
-.admin-user-card__donut-container.is-completed .admin-user-card__donut-text-box {
-  display: none;
+.admin-user-card__donut-container {
+  position: absolute;
+  top: 50%;
+  right: 0; /* or wherever it currently sits */
+  transform: translateY(-50%);
+  width: 72px;  /* bump this up from whatever it was, e.g. 56px -> 72px */
+  height: 72px;
+  overflow: visible;
 }
 
-/* Pure CSS Checkmark Layout */
-.admin-user-card__donut-container.is-completed::after {
-  content: "";
-  display: block;
-  width: 5px;
-  height: 9px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  margin-bottom: 2px; /* Visual centering adjustment */
-  box-sizing: border-box;
+.admin-user-card__donut-label {
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--text, #fff);
+}
+
+.dark-theme .admin-user-card__donut-label {
+  fill: var(--text, #fff);
+}
+
+.admin-user-card__donut-container.is-completed .admin-user-card__donut-label {
+  fill: var(--accent-2, #0a84ff);
 }

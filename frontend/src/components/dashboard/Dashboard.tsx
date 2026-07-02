@@ -2677,13 +2677,33 @@ export default function Dashboard({
                         return getTodayZone2Duration(workouts) || 0;
                     })()}
                     blurb={
-                    `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day.
-                    Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.
-                    ${formatDayOffset(userForecast.nextZone2Day) === "Today"
-                        ? `You have run about ${getTodayZone2Duration(workouts).toFixed(0) || 0}min, keep going!`
-                        : ""
-                    }`
-                } />
+                        (() => {
+                            const accomplished = getTodayZone2Duration(workouts) || 0;
+                            const target = zone2Duration || 1;
+                            const percentComplete = (accomplished / target) * 100;
+
+                            const baseInstruction = `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`;
+
+                            // Only show progress commentary if we're talking about today
+                            if (formatDayOffset(userForecast.nextZone2Day) !== "Today") {
+                                return baseInstruction;
+                            }
+
+                            let progressLine = "";
+                            if (percentComplete >= 100) {
+                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today — nice work!`;
+                            } else if (percentComplete >= 40) {
+                                progressLine = `You're about halfway there with ${accomplished.toFixed(0)}min so far, keep going!`;
+                            } else if (percentComplete > 0) {
+                                progressLine = `You've just started with ${accomplished.toFixed(0)}min — every minute counts!`;
+                            } else {
+                                progressLine = `You haven't logged any Zone 2 time today — let's get moving!`;
+                            }
+
+                            return `${baseInstruction} ${progressLine}`;
+                        })()
+                    }
+                />
                 <AdviceUserCard
                     key={5}
                     theme={theme}
@@ -2694,13 +2714,33 @@ export default function Dashboard({
                         return getTodayZone1Duration(workouts) || 0;
                     })()}
                     blurb={
-                    `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes of walking or similar light activity per day.
-                     Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.
-                      ${formatDayOffset(userForecast.nextZone1Day) === "Today"
-                        ? `You have walked about ${getTodayZone1Duration(workouts).toFixed(0) || 0}min, keep going!`
-                        : ""
-                    }`
-                } />
+                        (() => {
+                            const accomplished = getTodayZone1Duration(workouts) || 0;
+                            const target = zone1Duration || 1;
+                            const percentComplete = (accomplished / target) * 100;
+
+                            const baseInstruction = `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes of walking or similar light activity per day. Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.`;
+
+                            // Only show progress commentary if we're talking about today
+                            if (formatDayOffset(userForecast.nextZone1Day) !== "Today") {
+                                return baseInstruction;
+                            }
+
+                            let progressLine = "";
+                            if (percentComplete >= 100) {
+                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today — nice work!`;
+                            } else if (percentComplete >= 40) {
+                                progressLine = `You're about halfway there with ${accomplished.toFixed(0)}min so far, keep going!`;
+                            } else if (percentComplete > 0) {
+                                progressLine = `You've just started with ${accomplished.toFixed(0)}min — every minute counts!`;
+                            } else {
+                                progressLine = `You haven't logged any Zone 1 time today — let's get moving!`;
+                            }
+
+                            return `${baseInstruction} ${progressLine}`;
+                        })()
+                    }
+                />
 
                 <AdviceUserCard
                     key={6}

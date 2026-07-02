@@ -292,9 +292,14 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
     return (async () => {
         let retries = 3, baseDelayMs = 1000, maxDelayMs = 8000;
 
-        let currentDelay = baseDelayMs;
+        const startTime = Date.now();
+        const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+        const endTime = startTime + twentyFourHoursInMs;
 
-        for (let attempt = 1; attempt <= retries; attempt++) {
+        let currentDelay = baseDelayMs;
+        let attempt = 1;
+
+        while (Date.now() < endTime) {
             try {
                 const response = await fetch(`${API}/me/forecast`, {
                     method: "POST",
@@ -411,23 +416,27 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
                         age: typeof forecast.age === "number" ? forecast.age : 30
                     }
                 };
-            } catch (err) {
-                const isLastAttempt = attempt == retries;
+            } catch (error) {
+                // Check if the next loop execution would step past the 24-hour mark
+                const timeElapsed = Date.now() - startTime;
+                const timeRemaining = twentyFourHoursInMs - timeElapsed;
 
-                if (isLastAttempt) {
-                    // Out of attempts, bubble up the final error to the UI handler
-                    throw err;
+                if (timeRemaining <= 0) {
+                    console.error("Failed to complete request: Retry policy expired after 24 hours.");
+                    throw new Error(`24-Hour retry limit exceeded. Original error: ${error}`);
                 }
 
+                // Calculate exponential backoff with a full jitter distribution window
                 const exponentialBackoff = Math.min(maxDelayMs, currentDelay * Math.pow(2, attempt - 1));
-
-                // 2. Introduce a random value between 0 and the maximum exponential window bounds
                 const fullJitterDelay = Math.random() * exponentialBackoff;
 
-                console.warn(`Attempt ${attempt} failed: ${err}. Retrying in ${Math.round(fullJitterDelay)}ms...`);
+                // Ensure the jitter wait time doesn't accidentally run past our 24-hour expiration window
+                const finalWaitTime = Math.min(fullJitterDelay, timeRemaining);
 
-                // 3. Wait out the randomized window interval
-                await delay(fullJitterDelay);
+                console.warn(`[Attempt ${attempt}] Failed: ${error}. Retrying in ${Math.round(finalWaitTime / 1000)}s...`);
+
+                await delay(finalWaitTime);
+                attempt++;
             }
         }
     })();

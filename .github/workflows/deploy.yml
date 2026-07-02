@@ -1,0 +1,44 @@
+name: Hosted Runner Pages Deploy
+
+on:
+  push:
+    branches:
+      - main # Change to master if your primary branch uses that name
+
+# Grant permissions required to upload site builds to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy-site:
+    # Forces execution onto your specific self-hosted server environment
+    runs-on: [self-hosted]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Project Web Files
+        run: |
+          npm install
+          npm run build # Ensure this creates your static folder (e.g., dist or build)
+
+      - name: Upload Pages Package Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # Update this line if your build output lands in a different folder
+
+      - name: Publish to GitHub Pages Live Engine
+        uses: actions/deploy-pages@v4
+

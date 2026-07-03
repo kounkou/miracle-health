@@ -2691,16 +2691,16 @@ export default function Dashboard({
 
                             let progressLine = "";
                             if (percentComplete >= 100) {
-                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today — nice work!`;
+                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today, nice work!`;
                             } else if (percentComplete >= 40) {
                                 progressLine = `You're about halfway there with ${accomplished.toFixed(0)}min so far, keep going!`;
                             } else if (percentComplete > 0) {
-                                progressLine = `You've just started with ${accomplished.toFixed(0)}min — every minute counts!`;
+                                progressLine = `You've just started with ${accomplished.toFixed(0)}min, every minute counts!`;
                             } else {
-                                progressLine = `You haven't logged any Zone 2 time today — let's get moving!`;
+                                progressLine = `You haven't logged any Zone 2 time today, let's get moving!`;
                             }
 
-                            return `${baseInstruction} ${progressLine}`;
+                            return `${progressLine} ${baseInstruction}`;
                         })()
                     }
                 />
@@ -2728,16 +2728,16 @@ export default function Dashboard({
 
                             let progressLine = "";
                             if (percentComplete >= 100) {
-                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today — nice work!`;
+                                progressLine = `You've hit your target with ${accomplished.toFixed(0)}min today, nice work!`;
                             } else if (percentComplete >= 40) {
                                 progressLine = `You're about halfway there with ${accomplished.toFixed(0)}min so far, keep going!`;
                             } else if (percentComplete > 0) {
-                                progressLine = `You've just started with ${accomplished.toFixed(0)}min — every minute counts!`;
+                                progressLine = `You've just started with ${accomplished.toFixed(0)}min, every minute counts!`;
                             } else {
-                                progressLine = `You haven't logged any Zone 1 time today — let's get moving!`;
+                                progressLine = `You haven't logged any Zone 1 time today, let's get moving!`;
                             }
 
-                            return `${baseInstruction} ${progressLine}`;
+                            return `${progressLine} ${baseInstruction}`;
                         })()
                     }
                 />

@@ -30,16 +30,32 @@ export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
         const accent = styles.getPropertyValue("--accent-2").trim() || "#0a84ff";
         const muted = styles.getPropertyValue("--muted").trim() || "#8e8e93";
         const textColor = styles.getPropertyValue("--text").trim() || "#fff";
+        const surface2 = styles.getPropertyValue("--surface-2").trim() || "#2c2c2e";
+        const border = styles.getPropertyValue("--border").trim() || "#38383a";
 
         if (chartRef.current) {
             chartRef.current.destroy();
             chartRef.current = null;
         }
 
+        const today = new Date();
+        const totalDaysInPast = forecast.values.length;
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - (totalDaysInPast - 1));
+
         chartRef.current = new ChartJS(canvas, {
             type: "line",
             data: {
-                labels: forecast.values.map((_, index) => `Day ${index + 1}`), // Simple day labels
+                labels: forecast.values.map((_, index) => {
+                    const nextDate = new Date(startDate);
+                    nextDate.setDate(startDate.getDate() + index);
+
+                    // 3. Format the output string layout (e.g., "Jul 01" or "2026-07-01")
+                    return nextDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }),
                 datasets: [
                     {
                         data: forecast.values,
@@ -56,6 +72,10 @@ export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -67,6 +87,12 @@ export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
                         },
                         titleColor: textColor,
                         bodyColor: textColor,
+                        backgroundColor: surface2,
+                        borderColor: border,
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false,
                     },
                 },
                 scales: {

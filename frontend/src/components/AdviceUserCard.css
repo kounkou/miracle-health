@@ -42,6 +42,8 @@
   font-size: 14px;
   line-height: 1.5;
   opacity: 0.9;
+  margin: 0;
+  padding: 0;
 }
 
 /* Donut Chart Framing */
@@ -58,7 +60,7 @@
 
 .admin-user-card__donut-bg {
   fill: transparent;
-  stroke-width: 8;
+  stroke-width: 4;
   stroke: #e4e4e7; /* Light mode track */
 }
 
@@ -69,7 +71,7 @@
 .admin-user-card__donut-fill {
   fill: transparent;
   stroke: #0a84ff; /* Success Emerald Green */
-  stroke-width: 8;
+  stroke-width: 2;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.5s ease-in-out;
 }

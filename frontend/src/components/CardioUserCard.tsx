@@ -48,6 +48,8 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
         const accent = styles.getPropertyValue("--accent-2").trim() || "#0a84ff";
         const muted = styles.getPropertyValue("--muted").trim() || "#8e8e93";
         const textColor = styles.getPropertyValue("--text").trim() || "#fff";
+        const surface2 = styles.getPropertyValue("--surface-2").trim() || "#2c2c2e";
+        const border = styles.getPropertyValue("--border").trim() || "#38383a";
 
         // 1. Find the index where "today" is located in your labels array
         const todayIndex = forecast.labels.findIndex(label => label === "Today");
@@ -85,6 +87,10 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -96,6 +102,12 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                         },
                         titleColor: textColor,
                         bodyColor: textColor,
+                        backgroundColor: surface2,
+                        borderColor: border,
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false,                        
                     },
                 },
                 scales: {

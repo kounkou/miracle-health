@@ -46,16 +46,16 @@
   padding: 0;
 }
 
-/* Donut Chart Framing */
-.admin-user-card__donut-container {
+.admin-user-card__header {
+  /* lock the header's own height so a bigger donut can't stretch it */
   position: relative;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+  height: 48px; /* set this to whatever your current header height is */
+  overflow: visible;
 }
 
 .admin-user-card__donut-svg {
   transform: rotate(-90deg);
+  transform-origin: center;
 }
 
 .admin-user-card__donut-bg {
@@ -74,6 +74,8 @@
   stroke-width: 2;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.5s ease-in-out;
+  transform: rotate(0deg);
+  transform-origin: center;
 }
 
 /* Central Numeric Text Overlay */
@@ -98,13 +100,6 @@
   font-size: 9px;
   font-weight: normal;
   opacity: 0.7;
-}
-
-.admin-user-card__header {
-  /* lock the header's own height so a bigger donut can't stretch it */
-  position: relative;
-  height: 48px; /* set this to whatever your current header height is */
-  overflow: visible;
 }
 
 .admin-user-card__donut-container {

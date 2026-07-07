@@ -107,7 +107,7 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                         borderWidth: 1,
                         padding: 10,
                         cornerRadius: 8,
-                        displayColors: false,                        
+                        displayColors: false,
                     },
                 },
                 scales: {

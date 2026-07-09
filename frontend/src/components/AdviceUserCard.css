@@ -125,3 +125,94 @@
 .admin-user-card__donut-container.is-completed .admin-user-card__donut-label {
   fill: var(--accent-2, #0a84ff);
 }
+
+/* Clickable indicator for the normal card */
+.admin-user-card--clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-user-card--clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Line clamping to show less text in normal state (e.g., 2 lines max) */
+.admin-user-card__blurb--truncated {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Full screen backdrop blur overlay */
+.admin-user-card__overlay {
+    /* Take up the entire screen */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    /* Create a dimmed backdrop */
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+
+    /* 🚀 THIS CENTERS THE INNER POPUP PERFECTLY */
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center;     /* Centers vertically */
+
+    /* Sit on top of all other elements */
+    z-index: 9999;
+}
+
+.advice-popup-modal {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px; /* Prevents stretching on desktop */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    position: relative;
+    display: block; /* Explicitly sets layout to standard block */
+}
+
+/* Dark theme style override for the modal */
+.dark-theme .advice-popup-modal {
+    background: #1e1e1e;
+    color: #ffffff;
+}
+
+/* Close Window Button Styling */
+.admin-user-card__close-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0;
+}
+
+.admin-user-card__close-btn:hover {
+    opacity: 1;
+}
+
+/* Full text utility block */
+.admin-user-card__blurb--full {
+    white-space: pre-wrap; /* Preserves markdown paragraph spacing if needed */
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+
+.admin-user-card__footer {
+    margin-top: 16px;
+    font-size: 14px;
+    opacity: 0.8;
+    text-align: right;
+}

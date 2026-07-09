@@ -1146,6 +1146,65 @@ export default function Dashboard({
         };
     }
 
+    function generateProfileInsight(profile) {
+        const { k1, k2, tau1, tau2, fatigueEnd, recoveryEnd, supercompEnd } = profile;
+
+        // 1. Fallback / Safety Check: Prevent crashes if data is missing
+        if (!tau1 || !tau2 || tau1 <= 0 || tau2 <= 0) {
+            return "### ⚠️ Profile Error\nInsufficient or invalid physiological model data provided.";
+        }
+
+        // 2. Convert mathematical Tau constants to true biological half-lives
+        const fitnessHalfLife = tau1 * Math.LN2;
+        const fatigueHalfLife = tau2 * Math.LN2;
+
+        // 3. Identify the Athlete Phenotype Classification
+        let phenotypeStr = "";
+        let phenotypeDesc = "";
+
+        if (tau1 >= 50.0 && tau2 >= 15.0) {
+            phenotypeStr = "Diesel Engine (Endurance Responder)";
+            phenotypeDesc = "Your body builds an incredibly resilient structural base. You retain cardiorespiratory adaptations for a long time, but your central nervous system clears heavy training stress slowly.";
+        } else if (tau1 <= 30.0 && tau2 <= 10.0) {
+            phenotypeStr = "Fast-Twitch Rocket (Explosive Responder)";
+            phenotypeDesc = "You possess high neuromuscular sensitivity. You adapt rapidly to high-intensity training stimulus, but your hard-earned fitness drops off quickly if your training frequency stagnates.";
+        } else {
+            phenotypeStr = "Balanced / Hybrid Responder";
+            phenotypeDesc = "Your system exhibits a classic balanced recovery profile, showcasing standard adaptation rates and predictable conditioning decay.";
+        }
+
+        // 4. Evaluate Current Training Stress Status based on Fatigue Boundaries
+        let stressStatus = "";
+        let actionableAdvice = "";
+
+        // Calculate a 36% fatigue clearance milestone for practical guidance
+        const customClearanceDay = -tau2 * Math.log(0.64);
+
+        if (fatigueEnd <= 0.15) {
+            stressStatus = "High Acute Systemic Stress";
+            actionableAdvice = `You recently completed a heavy training block or a high-intensity session. Avoid adding new high-intensity stress immediately. Your optimal 36% fatigue clearance threshold occurs in ${customClearanceDay.toFixed(1)} days, making that the ideal target for your next major workout.`;
+        } else if (recoveryEnd > 0.0 && recoveryEnd < 3.0) {
+            stressStatus = "Approaching Peak Adaptation";
+            actionableAdvice = `Your body is actively clearing lingering metabolic waste. Your peak supercompensation window opens in ${recoveryEnd.toFixed(1)} days. Prepare to execute high-intensity intervals or a target race simulation during this upcoming physical green-light zone.`;
+        } else {
+            stressStatus = "Baseline / Fully Rested State";
+            actionableAdvice = "Your systemic fatigue is minimal. Your body is ready to absorb fresh structural stress. Initiate a high-load training session or a HIIT block to trigger a positive fitness adaptation.";
+        }
+
+        // 5. Synthesize into a polished narrative text block
+        return `Physiological Phenotype:
+
+${phenotypeStr} ${phenotypeDesc} Your model shows a true fitness half-life of ${fitnessHalfLife.toFixed(1)} days, paired with a fatigue clearance half-life of ${fatigueHalfLife.toFixed(1)} days.
+
+Current Training Stress:
+
+${stressStatus} ${actionableAdvice}
+
+Adaptation Timeline Insights:
+
+System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.toFixed(2)} days. Supercompensation Peak: Your absolute physical performance ceiling opens in ${recoveryEnd.toFixed(2)} days. Window Closes: Your current training adaptation gains begin to fade in ${supercompEnd.toFixed(2)} days.`;
+    }
+
     async function loadWorkouts(): Promise<Workout[]> {
         try {
             const data = await apiFetchWithAuth("/me/workouts", { headers: authHeader });
@@ -2676,6 +2735,7 @@ export default function Dashboard({
                     accomplishedMinutes={(() => {
                         return getTodayZone2Duration(workouts) || 0;
                     })()}
+                    isTracker={true}
                     blurb={
                         (() => {
                             const accomplished = getTodayZone2Duration(workouts) || 0;
@@ -2713,6 +2773,7 @@ export default function Dashboard({
                         // Calculate the total duration of Zone 1 workouts if Zone 1 workouts exist, otherwise return 0
                         return getTodayZone1Duration(workouts) || 0;
                     })()}
+                    isTracker={true}
                     blurb={
                         (() => {
                             const accomplished = getTodayZone1Duration(workouts) || 0;
@@ -2743,17 +2804,122 @@ export default function Dashboard({
                 />
 
                 <AdviceUserCard
+                    key={5}
+                    theme={theme}
+                    title={`💡 Profile insight`}
+                    targetMinutes={0}
+                    accomplishedMinutes={0}
+                    isTracker={false}
+                    blurb={
+                        (() => {
+                            const profile = {
+                                k1: fitnessForecast.k1,
+                                k2: fatigueForecast.k2,
+                                tau1: fitnessForecast.tau1,
+                                tau2: fatigueForecast.tau2,
+                                fatigueEnd: phaseDataRef.current.fatigueEnd,
+                                recoveryEnd: phaseDataRef.current.recoveryEnd,
+                                supercompEnd: phaseDataRef.current.supercompEnd
+                                }
+
+                            return generateProfileInsight(profile)
+                        })()
+                    }
+                />
+
+                <AdviceUserCard
+                    key={5}
+                    theme={theme}
+                    title={`Cardio Fitness Article`}
+                    targetMinutes={0}
+                    accomplishedMinutes={0}
+                    isTracker={false}
+                    blurb={(<span> <strong>What it means if your Cardio Fitness is Low</strong>
+<br/>
+<br/>
+<p>Your cardio fitness levels are something you should definitely pay attention to. Cardio fitness involves vital parts of the body. Your heart, lungs, muscles, blood and blood vessels. This makes it an excellent indicator of your overall fitness.</p>
+
+<br/>
+<strong>What is Cardio Fitness and how is it measured?</strong>
+<br/>
+<br/>
+<p>Cardio fitness, or cardiorespiratory fitness, is your body's ability to take in, circulate and use oxygen. It's measured in VO₂ max, which is the maximum amount of oxygen your body is able to use during exercise. The higher your VO₂ max, the more fit you are.
+You should note that predictions are heavily dependent on your age and sex.</p>
+
+<br/>
+<br/>
+<strong>Why you should be concerned if you're low</strong>
+<br/>
+<br/>
+<p>Low cardio fitness can be a predictor of long term issues like type 2 diabetes, colon cancer, cardiovascular and coronary artery disease, dementia and Alzheimer's. The good news is that if you raise your VO₂ max now and keep it up, you improve your chances of avoiding these issues later.</p>
+<br/>
+<br/>
+
+<strong>Things that could cause cardio fitness to go down</strong>
+<br/>
+<br/>
+<p>It's normal for VO₂ max to decrease as you get older. Other factors that can also cause it to decline include: Becoming pregnant, Medications or conditions that limit your heart rate, A significant injury or long term illness.</p>
+
+<br/>
+<br/>
+<strong>Improving your cardio fitness</strong>
+<br/>
+<br/>
+<p>Aerobic exercise that raises your heart rate and gets you breathing hard will give you the biggest boost. Like running, cycling or high-intensity interval training. And even just adding a few hills to your daily walk can help.</p>
+
+<br/>
+<br/>
+<strong>When to talk to your Doctor</strong>
+<br/>
+<br/>
+<p>If your VO₂ max is in the low range and you're considering a big change in your exercise routine, you may want to discuss it with your doctor first. Especially if you think an underlying condition could be the cause. Significant changes in any vital sign can indicate a change in your overall health that's worth bringing up with your doctor. </p>
+
+
+</span>)}
+                />
+
+                <AdviceUserCard
+                    key={5}
+                    theme={theme}
+                    title={`Software version`}
+                    targetMinutes={0}
+                    accomplishedMinutes={0}
+                    isTracker={false}
+                    blurb={
+                        (() => {
+                            return `Miracle Health Interface - version ${packageInfo.version}`
+                        })()
+                    }
+                />
+
+                <AdviceUserCard
                     key={6}
                     theme={theme}
                     title={`Disclaimer`}
                     targetMinutes={0}
                     accomplishedMinutes={0}
-                    blurb={`The predictions and advice provided are based on the data you have entered and model calculations. Consult a healthcare professional or certified trainer for
-                    personalized guidance. This application is for informational purposes only. Do not consider it a substitute for professional medical advice, diagnosis, or treatment.`} />
+                    isTracker={false}
+                    blurb={`Please Read This Critical Information Carefully Before Continuing
+
+1. Informational and Educational Purposes Only
+
+The physical performance forecasts, recovery boundaries, physiological adaptation windows, and training cycle tracking analyses generated by this application are derived entirely from mathematical algorithms, historical training density datasets, and the Miracle Inc. reasearch impulse-response models. All outputs, metrics, and insights are provided exclusively for informational, educational, and self-monitoring purposes. This software does not possess clinical intelligence, nor can it dynamically evaluate your real-world cardiovascular, metabolic, structural, or psychological state.
+
+2. Not a Substitute for Professional Medical Advice
+
+The information, analytics, and auto-generated training suggestions presented within this dashboard are absolutely not intended to be, and must never be taken as a substitute for, professional medical advice, clinical diagnosis, predictive health screenings, or professional injury treatment. Athletics and high-intensity physical exertion carry inherent risks of severe acute injury, chronic overtraining syndrome, metabolic exhaustion, and cardiovascular stress.Never disregard professional medical advice, delay seeking evaluation from a qualified healthcare practitioner, or alter your prescribed rehabilitation routines because of an analytical insight, baseline chart line, or phase boundary timeline displayed within this application.
+
+3. Mandatory Professional Consultation
+
+Before implementing any modifications to your current exercise routines, altering your training frequency, executing high-intensity interval training (HIIT), or attempting to target specific fatigue-clearance thresholds (such as the 36% metric or complete supercompensation windows), you must consult with a licensed healthcare professional, physician, cardiologist, or certified sports medicine specialist.A thorough clinical assessment is required to ensure your cardiovascular system and musculoskeletal integrity can safely absorb the physical stress scores calculated by this software.
+
+4. Assumption of Risk and Limitation of Liability
+
+By utilizing this software to track, schedule, or forecast your athletic workouts, you explicitly acknowledge and agree that you are choosing to engage in physical activity entirely at your own risk. The creators, developers, and distributors of this application make no guarantees regarding the biological accuracy or absolute mathematical certainty of the underlying predictive formulas.Under no circumstances shall the platform or its developers be held liable for any direct, indirect, incidental, consequential, or punitive damages, including but not limited to physical injury, illnesses, medical emergencies, rhabdomyolysis, or overtraining setbacks resulting directly or indirectly from your reliance on the metrics provided herein.`} />
             </div>
             <div
                 className="admin-user-card__disclaimer">
-                <dd>© 2026 Miracle Health. All rights reserved. v{packageInfo.version}</dd>
+                <dd>© 2026 Miracle Health. All rights reserved.</dd>
             </div>
         </div>
     );

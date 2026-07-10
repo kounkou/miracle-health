@@ -34,13 +34,23 @@ interface UserCardProps {
     forecast: UserForecast;
     theme: "light" | "dark";
     title: string;
+    isLoading: boolean;
 }
 
-export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title }) => {
+export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, isLoading = false }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartJS | null>(null);
 
     useEffect(() => {
+        // Skip canvas drawing setups entirely if the card is actively loading empty variables
+        if (isLoading || !forecast || !forecast.labels.length) {
+            if (chartRef.current) {
+                chartRef.current.destroy();
+                chartRef.current = null;
+            }
+            return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -51,21 +61,14 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
         const surface2 = styles.getPropertyValue("--surface-2").trim() || "#2c2c2e";
         const border = styles.getPropertyValue("--border").trim() || "#38383a";
 
-        // 1. Find the index where "today" is located in your labels array
         const todayIndex = forecast.labels.findIndex(label => label === "Today");
-        // Note: Replace "Today" with your exact string format if it's a date like "2026-06-25"
-
-        // 2. If "today" is found, slice the arrays up to (and including) today
         const finalLabels = todayIndex !== -1 ? forecast.labels.slice(0, todayIndex + 1) : forecast.labels;
         const finalValues = todayIndex !== -1 ? forecast.values.slice(0, todayIndex + 1) : forecast.values;
-
 
         if (chartRef.current) {
             chartRef.current.destroy();
             chartRef.current = null;
         }
-
-        if (!forecast.labels.length) return;
 
         chartRef.current = new ChartJS(canvas, {
             type: "line",
@@ -139,44 +142,63 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
             chartRef.current?.destroy();
             chartRef.current = null;
         };
-    }, [forecast, theme]);
+    }, [forecast, theme, isLoading]);
 
     return (
-        <div className="admin-user-card">
+        <div className={`admin-user-card ${theme === 'dark' ? 'dark-theme' : ''}`}>
             <div className="admin-user-card__header">
                 <span className="admin-user-card__title">{title}</span>
-                {forecast.vo2maxClass && (
+                {!isLoading && forecast.vo2maxClass && (
                     <span className={`admin-user-card__peak ${forecast.vo2maxClass.toLowerCase().replace(" ", "-")}`}>
                         {forecast.vo2maxClass}
                     </span>
                 )}
-                {forecast.peakVo2 !== null && (
+                {!isLoading && forecast.peakVo2 !== null && forecast.peakVo2 !== undefined && (
                     <span className="admin-user-card__peak">
                         {forecast.peakVo2.toFixed(1)} VO₂max
                     </span>
                 )}
             </div>
 
-            {forecast.error ? (
+            {!isLoading && forecast.error ? (
                 <div className="admin-user-card__error">{forecast.error}</div>
             ) : (
                 <>
+                    {/* CHART WORK AREA CONTAINER */}
                     <div className="admin-user-card__chart-wrap" style={{ position: 'relative', height: '140px', width: '100%' }}>
+                        {isLoading && (
+                            <div className="graph-loading-overlay" style={{ borderRadius: '8px' }}>
+                                <div className="loading-spinner" style={{ width: '24px', height: '24px', borderWidth: '2px' }} />
+                            </div>
+                        )}
                         <canvas ref={canvasRef} />
                     </div>
+
+                    {/* METRIC BOTTOM FIELD LINES ZONE */}
                     <div className="admin-user-card__stats">
                         <div className="admin-user-card__stat">
                             <span>Next HIIT</span>
-                            <strong>{formatDayOffset(forecast.nextHiitDay)}</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{formatDayOffset(forecast.nextHiitDay)}</strong>
+                            )}
                         </div>
                         <div className="admin-user-card__stat">
                             <span>Next Run</span>
-                            <strong>{formatDayOffset(forecast.nextZone2Day)}</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{formatDayOffset(forecast.nextZone2Day)}</strong>
+                            )}
                         </div>
                         <div className="admin-user-card__stat">
                             <span>Next Walk</span>
-                            {/* <WorkoutBadge workoutDate={formatDayOffset(forecast.nextZone1Day)} theme={theme} /> */}
-                            <strong>{formatDayOffset(forecast.nextZone1Day)}</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{formatDayOffset(forecast.nextZone1Day)}</strong>
+                            )}
                         </div>
                     </div>
                 </>

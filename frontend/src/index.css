@@ -2779,3 +2779,76 @@ select.plain-input {
     margin: 0;
     line-height: 1;
 }
+
+/* Loading */
+
+/* --- Non-Blocking Structural Grid Overlay --- */
+.admin-grid {
+    position: relative; /* Pins overlay directly to container perimeter bounds */
+}
+
+.graph-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.6); /* Translucent light mode blur */
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    z-index: 50; /* Sits over metric fields but below modal popups */
+    border-radius: 16px;
+}
+
+/* Theme variable adaptation wrapper */
+.dark-theme .graph-loading-overlay,
+.admin-user-card.dark-theme .graph-loading-overlay {
+    background: rgba(18, 18, 18, 0.6); /* Translucent dark mode blur */
+}
+
+/* Hardware accelerated ring spinner icon */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border, #e4e4e7);
+    border-top-color: var(--accent-2, #0a84ff);
+    border-radius: 50%;
+    animation: spinCircle 0.85s linear infinite;
+}
+
+@keyframes spinCircle {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Pulse Wave Text Shimmering Skeletons --- */
+.skeleton-text-bone {
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        #e4e4e7 25%,
+        #f4f4f5 50%,
+        #e4e4e7 75%
+    );
+    background-size: 200% 100%;
+    animation: pulseShimmer wave 1.6s infinite linear;
+}
+
+.dark-theme .skeleton-text-bone {
+    background: linear-gradient(
+        90deg,
+        #2c2c2e 25%,
+        #3a3a3c 50%,
+        #2c2c2e 75%
+    );
+    background-size: 200% 100%;
+}
+
+@keyframes wave {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

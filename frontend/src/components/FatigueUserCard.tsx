@@ -16,13 +16,23 @@ interface UserCardProps {
     k2: number | null;
     tau2: number | null;
     rmse: number | null;
+    isLoading: boolean;
 }
 
-export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k2, tau2, rmse }) => {
+export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, title, k2, tau2, rmse, isLoading }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const chartRef = useRef<ChartJS | null>(null);
 
     useEffect(() => {
+        // Skip canvas drawing setups entirely if the card is actively loading empty variables
+        if (isLoading || !forecast) {
+            if (chartRef.current) {
+                chartRef.current.destroy();
+                chartRef.current = null;
+            }
+            return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -124,38 +134,55 @@ export const FatigueUserCard: React.FC<UserCardProps> = ({ forecast, theme, titl
             chartRef.current?.destroy();
             chartRef.current = null;
         };
-    }, [forecast, theme]);
+    }, [forecast, theme, isLoading]);
 
     return (
-        <div className="admin-user-card">
+       <div className={`admin-user-card ${theme === 'dark' ? 'dark-theme' : ''}`}>
             <div className="admin-user-card__header">
                 <span className="admin-user-card__title">{title}</span>
-                {forecast.values !== null && (
+                {!isLoading && forecast.values !== null && (
                     <span className="admin-user-card__peak">
                         Current {forecast.values[forecast.values.length - 1].toFixed(3)}
                     </span>
                 )}
             </div>
 
-            {forecast.error ? (
+            {!isLoading && forecast.error ? (
                 <div className="admin-user-card__error">{forecast.error}</div>
             ) : (
                 <>
                     <div className="admin-user-card__chart-wrap" style={{ position: 'relative', height: '140px', width: '100%' }}>
+                        {isLoading && (
+                            <div className="graph-loading-overlay" style={{ borderRadius: '8px' }}>
+                                <div className="loading-spinner" style={{ width: '24px', height: '24px', borderWidth: '2px' }} />
+                            </div>
+                        )}
                         <canvas ref={canvasRef} />
                     </div>
                     <div className="admin-user-card__stats">
                         <div className="admin-user-card__stat">
                             <span>Fatigue Gain</span>
-                            <strong>{k2.toFixed(5)}</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{k2.toFixed(5)}</strong>
+                            )}
                         </div>
                         <div className="admin-user-card__stat">
                             <span>Decay</span>
-                            <strong>{tau2.toFixed(0)} days</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{tau2.toFixed(0)} days</strong>
+                            )}
                         </div>
                         <div className="admin-user-card__stat">
                             <span>Error</span>
-                            <strong>{rmse !== null ? rmse.toFixed(2) : " —"}</strong>
+                            {isLoading ? (
+                                <div className="skeleton-text-bone" style={{ width: '50px', marginTop: '4px' }} />
+                            ) : (
+                                <strong>{rmse !== null ? rmse.toFixed(2) : " —"}</strong>
+                            )}
                         </div>
                     </div>
                 </>

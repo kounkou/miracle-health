@@ -2651,18 +2651,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
         id: index + 1, // Assign a unique ID based on the index
     })) : [];
 
-    if (!userForecast) {
-        return (
-            <div className="card animate-in dashboard">
-                <div className="admin-grid" style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-                <div className="admin-loading">
-                    <span className="spinner large" />
-                    <span>Loading data…</span>
-                </div>
-                </div>
-            </div>
-        );
-    }
+    const isOverallLoading = !userForecast || !fitnessForecast || !fatigueForecast;
 
     return (
         <div className="card animate-in dashboard">
@@ -2709,15 +2698,19 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     key={1}
                     forecast={userForecast}
                     theme={theme}
-                    title="Cardio Fitness" />
-                <FitnessUserCard
+                    title="Cardio Fitness"
+                    isLoading={isOverallLoading}/>
+
+               <FitnessUserCard
                     key={2}
                     forecast={fitnessForecast}
                     theme={theme}
                     title="Fitness"
                     k1={fitnessForecast?.k1}
                     tau1={fitnessForecast?.tau1}
-                    rmse={fitnessForecast?.rmse} />
+                    rmse={fitnessForecast?.rmse}
+                    isLoading={isOverallLoading} />
+
                 <FatigueUserCard
                     key={3}
                     forecast={fatigueForecast}
@@ -2725,13 +2718,19 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     title="Fatigue"
                     k2={fatigueForecast?.k2}
                     tau2={fatigueForecast?.tau2}
-                    rmse={fatigueForecast?.rmse} />
+                    rmse={fatigueForecast?.rmse}
+                    isLoading={isOverallLoading} />
 
                 <AdviceUserCard
                     key={4}
+                    isLoading={isOverallLoading}
                     theme={theme}
-                    title={`💡 Running Advice - ${zone2Duration.toFixed(0)}min`}
-                    targetMinutes={formatDayOffset(userForecast.nextZone2Day) === "Today" ? Math.round(zone2Duration) : 0}
+                    title={
+                        zone2Duration !== undefined && zone2Duration !== null
+                            ? `💡 Running Advice - ${zone2Duration.toFixed(0)}min`
+                            : "💡 Running Advice"
+                    }
+                    targetMinutes={formatDayOffset(userForecast?.nextZone2Day) === "Today" ? Math.round(zone2Duration) : 0}
                     accomplishedMinutes={(() => {
                         return getTodayZone2Duration(workouts) || 0;
                     })()}
@@ -2742,10 +2741,10 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                             const target = zone2Duration || 1;
                             const percentComplete = (accomplished / target) * 100;
 
-                            const baseInstruction = `Based on your parameters, we recommend at least ${zone2Duration.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`;
+                            const baseInstruction = `Based on your parameters, we recommend at least ${zone2Duration?.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`;
 
                             // Only show progress commentary if we're talking about today
-                            if (formatDayOffset(userForecast.nextZone2Day) !== "Today") {
+                            if (formatDayOffset(userForecast?.nextZone2Day) !== "Today") {
                                 return baseInstruction;
                             }
 
@@ -2766,9 +2765,14 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                 />
                 <AdviceUserCard
                     key={5}
+                    isLoading={isOverallLoading}
                     theme={theme}
-                    title={`💡 Walking Advice - ${zone1Duration.toFixed(0)}min`}
-                    targetMinutes={formatDayOffset(userForecast.nextZone1Day) === "Today" ? Math.round(zone1Duration) : 0}
+                    title={
+                        zone1Duration !== undefined && zone1Duration !== null
+                            ? `💡 Walking Advice - ${zone1Duration.toFixed(0)}min`
+                            : "💡 Walking Advice"
+                    }
+                    targetMinutes={formatDayOffset(userForecast?.nextZone1Day) === "Today" ? Math.round(zone1Duration) : 0}
                     accomplishedMinutes={(() => {
                         // Calculate the total duration of Zone 1 workouts if Zone 1 workouts exist, otherwise return 0
                         return getTodayZone1Duration(workouts) || 0;
@@ -2780,10 +2784,10 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                             const target = zone1Duration || 1;
                             const percentComplete = (accomplished / target) * 100;
 
-                            const baseInstruction = `Based on your parameters, we recommend at least ${zone1Duration.toFixed(0)} minutes of walking or similar light activity per day. Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.`;
+                            const baseInstruction = `Based on your parameters, we recommend at least ${zone1Duration?.toFixed(0)} minutes of walking or similar light activity per day. Zone 1 workouts require a comfortable effort like a casual walk or easy bike ride. You can talk easily, and maintain a full conversation without catching your breath.`;
 
                             // Only show progress commentary if we're talking about today
-                            if (formatDayOffset(userForecast.nextZone1Day) !== "Today") {
+                            if (formatDayOffset(userForecast?.nextZone1Day) !== "Today") {
                                 return baseInstruction;
                             }
 
@@ -2804,7 +2808,8 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                 />
 
                 <AdviceUserCard
-                    key={5}
+                    key={6}
+                    isLoading={isOverallLoading}
                     theme={theme}
                     title={`💡 Profile insight`}
                     targetMinutes={0}
@@ -2813,13 +2818,13 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     blurb={
                         (() => {
                             const profile = {
-                                k1: fitnessForecast.k1,
-                                k2: fatigueForecast.k2,
-                                tau1: fitnessForecast.tau1,
-                                tau2: fatigueForecast.tau2,
-                                fatigueEnd: phaseDataRef.current.fatigueEnd,
-                                recoveryEnd: phaseDataRef.current.recoveryEnd,
-                                supercompEnd: phaseDataRef.current.supercompEnd
+                                k1: fitnessForecast?.k1,
+                                k2: fatigueForecast?.k2,
+                                tau1: fitnessForecast?.tau1,
+                                tau2: fatigueForecast?.tau2,
+                                fatigueEnd: phaseDataRef.current?.fatigueEnd,
+                                recoveryEnd: phaseDataRef.current?.recoveryEnd,
+                                supercompEnd: phaseDataRef.current?.supercompEnd
                                 }
 
                             return generateProfileInsight(profile)
@@ -2828,7 +2833,8 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                 />
 
                 <AdviceUserCard
-                    key={5}
+                    key={7}
+                    isLoading={isOverallLoading}
                     theme={theme}
                     title={`Cardio Fitness Article`}
                     targetMinutes={0}
@@ -2879,21 +2885,24 @@ You should note that predictions are heavily dependent on your age and sex.</p>
                 />
 
                 <AdviceUserCard
-                    key={5}
+                    key="software-version" // Using an explicit semantic key string instead of a magic number
+                    isLoading={isOverallLoading}
                     theme={theme}
-                    title={`Software version`}
+                    title="Software version"
                     targetMinutes={0}
                     accomplishedMinutes={0}
                     isTracker={false}
+                    // Using clean JSX inline variable wrapping with bold typography emphasis
                     blurb={
-                        (() => {
-                            return `Miracle Health Interface - version ${packageInfo.version}`
-                        })()
+                        <span>
+                            Running <strong>Miracle Health Interface</strong> • Build Version {packageInfo.version}
+                        </span>
                     }
                 />
 
                 <AdviceUserCard
-                    key={6}
+                    key={9}
+                    isLoading={isOverallLoading}
                     theme={theme}
                     title={`Disclaimer`}
                     targetMinutes={0}

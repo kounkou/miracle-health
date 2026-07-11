@@ -1,0 +1,95 @@
+.alert-card {
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.08);
+}
+
+/* 🚨 THE OVERTRAINING STATE CRITICAL OVERRIDES */
+.alert-card--danger {
+    background: #fff5f5;
+    border: 2px solid #ff3b30;
+}
+
+.alert-card--danger.dark-theme {
+    background: #2c1514;
+    border: 2px solid #ff453a;
+}
+
+.alert-card__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-card__icon {
+    font-size: 20px;
+}
+
+.alert-card__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #cc0000;
+}
+
+.dark-theme .alert-card__title {
+    color: #ff453a;
+}
+
+.alert-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.alert-card__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4a4a4a;
+}
+
+.dark-theme .alert-card__text {
+    color: #e5e5ea;
+}
+
+/* Emphasized dynamic calculation metric anchor */
+.alert-card__metrics-badge {
+    align-self: flex-start;
+    background: #ff3b30;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.dark-theme .alert-card__metrics-badge {
+    background: #ff453a;
+}
+
+/* --- Loading Animation Framework --- */
+.alert-card--loading {
+    background: var(--surface-2, #ffffff);
+    border: 1px solid var(--border, #e4e4e7);
+}
+
+.alert-card__skeleton {
+    width: 100%;
+    height: 48px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #e4e4e7 25%, #f4f4f5 50%, #e4e4e7 75%);
+    background-size: 200% 100%;
+    animation: alertShimmer 1.5s infinite linear;
+}
+
+@keyframes alertShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

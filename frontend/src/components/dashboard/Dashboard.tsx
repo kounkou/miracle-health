@@ -19,6 +19,9 @@ import { CardioUserCard } from "../CardioUserCard"
 import FatigueUserCard from "../FatigueUserCard";
 import FitnessUserCard from "../FitnessUserCard";
 import AdviceUserCard from "../AdviceUserCard";
+import WeeklyVolumeTracker from "../WeeklyVolumeTracker";
+import ReadinessScore from "../ReadinessScore";
+import OvertrainingAlert from "../OvertrainingAlert";
 import Onboarding from "../Onboarding";
 import packageInfo from '../../../../package.json';
 
@@ -852,6 +855,38 @@ export default function Dashboard({
         // Legend
         const legendEl = document.querySelector<HTMLDivElement>(".phase-legend");
         if (legendEl) legendEl.style.display = "flex";
+    }
+
+    function getDaysSinceLastWorkout(targetType) {
+        let latestWorkoutDate = null;
+
+        // 1. Loop through workouts to isolate the absolute newest matching date
+        for (const wo of workoutsRef.current) {
+            if (wo.workoutType === targetType) {
+                // Force clean local midnight date parsing initialization
+                const d = new Date(wo.date + "T00:00:00");
+
+                // Track the most recent chronological entry
+                if (!latestWorkoutDate || d > latestWorkoutDate) {
+                    latestWorkoutDate = d;
+                }
+            }
+        }
+
+        // 2. Fallback check: If they have never logged this activity type, return a high number
+        if (!latestWorkoutDate) return Infinity;
+
+        // 3. Clear time variables from today's date anchor for precision calendar matching
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        latestWorkoutDate.setHours(0, 0, 0, 0);
+
+        // 4. Calculate exact elapsed calendar days using millisecond conversions
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const timeDiffMs = today.getTime() - latestWorkoutDate.getTime();
+
+        // Using Math.max floor safeguards against minor timezone boundary shifts
+        return Math.max(0, Math.floor(timeDiffMs / msPerDay));
     }
 
     function buildModelChart(view: "k1" | "k2" | "tau1" | "tau2") {
@@ -2721,6 +2756,18 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     rmse={fatigueForecast?.rmse}
                     isLoading={isOverallLoading} />
 
+                <ReadinessScore
+                    theme={theme}
+                    isLoading={isOverallLoading}
+                    // These states represent the final day parameters of your simulation
+                    w1={modelDataRef.current?.allFitnessSignals[modelDataRef.current?.allFitnessSignals.length - 1] || 0}
+                    w2={modelDataRef.current?.allFatigueSignals[modelDataRef.current?.allFatigueSignals.length - 1] || 0}
+                    k1={fitnessForecast?.k1 || 0}
+                    k2={fatigueForecast?.k2 || 0}
+                    daysSinceLastHiit={getDaysSinceLastWorkout("hiit")}
+                    daysSinceLastZone2={getDaysSinceLastWorkout("zone2")}
+                />
+
                 <AdviceUserCard
                     key={4}
                     isLoading={isOverallLoading}
@@ -2763,6 +2810,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                         })()
                     }
                 />
+
                 <AdviceUserCard
                     key={5}
                     isLoading={isOverallLoading}
@@ -2807,7 +2855,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     }
                 />
 
-                <AdviceUserCard
+                {/* <AdviceUserCard
                     key={6}
                     isLoading={isOverallLoading}
                     theme={theme}
@@ -2830,7 +2878,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                             return generateProfileInsight(profile)
                         })()
                     }
-                />
+                /> */}
 
                 <AdviceUserCard
                     key={7}
@@ -2883,6 +2931,29 @@ You should note that predictions are heavily dependent on your age and sex.</p>
 
 </span>)}
                 />
+
+                {/* <WeeklyVolumeTracker
+                    theme={theme}
+                    isLoading={isOverallLoading}
+                    runningVolume={{
+                        current: Math.round(getTodayZone2Duration(workouts)),
+                        target:  Math.round(zone2Duration) || 1,
+                        color: "var(--accent-2, #0a84ff)" // Matches your running branding blue
+                    }}
+                    walkingVolume={{
+                        current: Math.round(getTodayZone1Duration(workouts)),
+                        target: Math.round(zone1Duration) || 1,
+                        color: "#34c759" // Recovery Emerald green
+                    }}
+                /> */}
+
+                {/* <OvertrainingAlert
+                    theme={theme}
+                    isLoading={isOverallLoading}
+                    scheduledHiitDateStr="2026-07-14" // Pass the user's input target selection variable here
+                    lastHiitDateStr="2026-07-10"      // Sourced straight from userForecast.lastHiitHistory
+                    tau2={fatigueForecast?.tau2 - 4 || 8.8595}
+                /> */}
 
                 <AdviceUserCard
                     key="software-version" // Using an explicit semantic key string instead of a magic number

@@ -24,6 +24,9 @@ import ReadinessScore from "../ReadinessScore";
 import OvertrainingAlert from "../OvertrainingAlert";
 import Onboarding from "../Onboarding";
 import packageInfo from '../../../../package.json';
+import { WorkoutBuddyMatcher } from "../WorkoutBuddyMatcher";
+import { ReadinessTrendGraph } from "../ReadinessTrendGraph";
+import { calculateReadinessScore } from '../readinessUtils.ts'; // Adjust paths
 
 ChartJS.register(
     LineController,
@@ -137,6 +140,25 @@ interface FatigueForecast {
     k2: number | null; // Fatigue gain rate
     tau2: number | null; // Fatigue decay rate
     rmse: number | null; // Root Mean Square Error
+}
+
+export interface ScoreResult {
+  score: number;
+  tsb: number;
+}
+
+export interface DailyReadinessData {
+  dayName: string;      // e.g., "Mon", "Tue"
+  dateString: string;    // e.g., "July 14"
+  score: number;         // 0 to 100
+  workoutType?: 'HIIT' | 'Zone 2' | 'Walk' | 'None';
+}
+
+export interface ReadinessInputs {
+  fitnessSignal: number;
+  fatigueSignal: number;
+  k1: number;
+  k2: number;
 }
 
 type Vo2maxThresholds = { lowMax: number; belowAvgMax: number; aboveAvgMax: number };
@@ -294,7 +316,6 @@ function computeForecastFromAPI(inputs: HealthInputs, token: string, trainingMod
     }> {
     return (async () => {
         let retries = 10, baseDelayMs = 1000, maxDelayMs = 8000;
-
         let currentDelay = baseDelayMs;
 
         for (let attempt = 1; attempt <= retries; attempt++) {
@@ -554,6 +575,120 @@ export default function Dashboard({
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    function generateTrendGraphData(workouts: Workout[], historicalSignals: ReadinessInputs[]): DailyReadinessData[] {
+        const result: DailyReadinessData[] = [];
+        const totalDaysToGenerate = 30;
+
+        // 🧠 FIX 1: Timezone-safe date key extractor for rolling graph lookups
+        const getLocalDateKey = (dateObj: Date): string => {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // 🧠 FIX 2: Timezone-safe parser that forces raw strings to parse in LOCAL midnight
+        const parseToLocalMidnight = (dateInput: string | Date): Date => {
+            if (dateInput instanceof Date) {
+                return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
+            }
+
+            // If it's a standard YYYY-MM-DD string, extract parts to avoid UTC shifting
+            const match = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+                const year = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10) - 1; // 0-indexed in JS
+                const day = parseInt(match[3], 10);
+                return new Date(year, month, day);
+            }
+
+            // Fallback for fallback strings
+            const fallback = new Date(dateInput);
+            return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
+        };
+
+        // 1. Group raw workouts using the local-safe date key mapping
+        const workoutMap = new Map<string, Workout[]>();
+        workouts.forEach(w => {
+            const localMidnightDate = parseToLocalMidnight(w.date);
+            const dateKey = getLocalDateKey(localMidnightDate);
+            const existing = workoutMap.get(dateKey) || [];
+            existing.push(w);
+            workoutMap.set(dateKey, existing);
+        });
+
+        // 2. Generate a rolling timeline backing out from today's active local system date
+        const now = new Date();
+
+        for (let i = totalDaysToGenerate - 1; i >= 0; i--) {
+            const currentTargetDate = new Date();
+            currentTargetDate.setDate(now.getDate() - i);
+
+            // Fixed lookup key matching local time coordinates exactly
+            const dateKey = getLocalDateKey(currentTargetDate);
+
+            // Find the primary training stressor categorized for this specific day
+            const daysWorkouts = workoutMap.get(dateKey) || [];
+            let primaryDisplayStressor: 'HIIT' | 'Zone 2' | 'Walk' | 'None' = 'None';
+
+            if (daysWorkouts.length > 0) {
+                const types = daysWorkouts.map(w => w.workoutType?.toUpperCase() || '');
+                if (types.includes('HIIT')) primaryDisplayStressor = 'HIIT';
+                else if (types.includes('ZONE 2') || types.includes('ZONE2')) primaryDisplayStressor = 'Zone 2';
+                else if (types.includes('WALK')) primaryDisplayStressor = 'Walk';
+            }
+
+            // 3. Calculate interval deltas relative to target local midnight
+            let daysSinceHiit: number | undefined = undefined;
+            let daysSinceZone2: number | undefined = undefined;
+
+            const targetMidnight = new Date(currentTargetDate.getFullYear(), currentTargetDate.getMonth(), currentTargetDate.getDate());
+
+            workouts.forEach(w => {
+                const workoutMidnight = parseToLocalMidnight(w.date);
+
+                if (workoutMidnight <= targetMidnight) {
+                    const timeDiffMs = targetMidnight.getTime() - workoutMidnight.getTime();
+                    const wholeDays = Math.round(timeDiffMs / (1000 * 60 * 60 * 24));
+
+                    if (w.workoutType?.toUpperCase() === 'HIIT') {
+                        if (daysSinceHiit === undefined || wholeDays < daysSinceHiit) {
+                            daysSinceHiit = wholeDays;
+                        }
+                    }
+                    if (w.workoutType?.toUpperCase() === 'ZONE 2' || w.workoutType?.toUpperCase() === 'ZONE2') {
+                        if (daysSinceZone2 === undefined || wholeDays < daysSinceZone2) {
+                            daysSinceZone2 = wholeDays;
+                        }
+                    }
+                }
+            });
+
+            // 4. Extract today's corresponding physical metrics row context safely
+            const signalIndex = Math.min(historicalSignals.length - 1, (historicalSignals.length - totalDaysToGenerate) + (totalDaysToGenerate - 1 - i));
+            const currentMetrics = historicalSignals[signalIndex] || historicalSignals[historicalSignals.length - 1];
+
+            // 5. Call your calibrated linear decay engine function
+            const engineOutput = calculateReadinessScore(currentMetrics, {
+                daysHiit: daysSinceHiit,
+                daysZone2: daysSinceZone2
+            });
+
+            // 6. Build the final visualization trend data payload
+            const dayFormatter = new Intl.DateTimeFormat('en-CA', { weekday: 'short' });
+            const dateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'long', day: 'numeric' });
+
+            result.push({
+                dayName: dayFormatter.format(currentTargetDate),
+                dateString: dateFormatter.format(currentTargetDate),
+                score: engineOutput.score,
+                workoutType: primaryDisplayStressor
+            });
+        }
+
+        return result;
+    }
 
     const handleOnboardingSubmit = () => {
         const computedInputs = { sex: sex, dob: dob };
@@ -2245,7 +2380,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
     //                                             tau2: modelSignalsDisplay.tau2
     //                                         });
 
-    //                                         return <>Based on your parameters, we recommend at least <strong>{zone2Duration.toFixed(0)}</strong> minutes based on scheduled recommendation of running or similar moderate activity. Zone 2 workouts require a moderate, steady effort like a light jog or a brisk power walk. You can still talk, but you can only manage short sentences before needing a breath.</>;
+    //                                         return <>Based on your parameters, we recommend at least <strong>{zone2Duration.toFixed(0)}</strong> minutes based on scheduled recommendation of running or similar moderate activity. Zone 2 workouts require a moderate, steady effort like a light jog or a brisk power walk. You can still talk, but you can only manage short sentences before needing a breath. To maximize the effectiveness of this session, your heart rate must hover right at 60% of your maximum capability and strictly stay below that ceiling. Pushing past this limit shifts your body into higher glucose-burning zones, destroying the fat-adaptation and capillary-building benefits unique to Zone 2 recovery.</>;
     //                                     })()}
     //                                 </dd>
     //                             </div>
@@ -2688,6 +2823,16 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
 
     const isOverallLoading = !userForecast || !fitnessForecast || !fatigueForecast;
 
+    const trailingWeekMetrics: DailyReadinessData[] = [
+        { dayName: 'Mon', dateString: 'July 14', score: 21, workoutType: 'Zone 2' },
+        { dayName: 'Tue', dateString: 'July 15', score: 56, workoutType: 'None' },
+        { dayName: 'Wed', dateString: 'July 16', score: 81, workoutType: 'None' },
+        { dayName: 'Thu', dateString: 'July 17', score: 48, workoutType: 'Zone 2' },
+        { dayName: 'Fri', dateString: 'July 18', score: 72, workoutType: 'None' },
+        { dayName: 'Sat', dateString: 'July 19', score: 90, workoutType: 'None' },
+        { dayName: 'Sun', dateString: 'July 20', score: 93, workoutType: 'None' },
+    ];
+
     return (
         <div className="card animate-in dashboard">
             {
@@ -2760,12 +2905,20 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                     theme={theme}
                     isLoading={isOverallLoading}
                     // These states represent the final day parameters of your simulation
-                    w1={modelDataRef.current?.allFitnessSignals[modelDataRef.current?.allFitnessSignals.length - 1] || 0}
-                    w2={modelDataRef.current?.allFatigueSignals[modelDataRef.current?.allFatigueSignals.length - 1] || 0}
+                    fitnessSignal={modelDataRef.current?.allFitnessSignals[modelDataRef.current?.allFitnessSignals.length - 1] || 0}
+                    fatigueSignal={modelDataRef.current?.allFatigueSignals[modelDataRef.current?.allFatigueSignals.length - 1] || 0}
                     k1={fitnessForecast?.k1 || 0}
                     k2={fatigueForecast?.k2 || 0}
-                    daysSinceLastHiit={getDaysSinceLastWorkout("hiit")}
-                    daysSinceLastZone2={getDaysSinceLastWorkout("zone2")}
+                    daysHiit={getDaysSinceLastWorkout("hiit")}
+                    daysZone2={getDaysSinceLastWorkout("zone2")}
+                    data={generateTrendGraphData(workouts, [
+                        {
+                            fitnessSignal: modelDataRef.current?.allFitnessSignals?.[0] || 0,
+                            fatigueSignal: modelDataRef.current?.allFatigueSignals?.[0] || 0,
+                            k1: fitnessForecast?.k1 || 0,
+                            k2: fatigueForecast?.k2 || 0
+                        }
+                    ])}
                 />
 
                 <AdviceUserCard
@@ -2788,7 +2941,7 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                             const target = zone2Duration || 1;
                             const percentComplete = (accomplished / target) * 100;
 
-                            const baseInstruction = `Based on your parameters, we recommend at least ${zone2Duration?.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath.`;
+                            const baseInstruction = `Based on your parameters, we recommend at least ${zone2Duration?.toFixed(0)} minutes of running or similar moderate activity per day. Zone 2 workouts require a steady effort like a light jog or brisk power walk. You can talk, but can only manage short sentences before needing a breath. To maximize the effectiveness of this session, your heart rate must hover right at 60% of your maximum capability and strictly stay below that ceiling. Pushing past this limit shifts your body into higher glucose-burning zones, destroying the fat-adaptation and capillary-building benefits unique to Zone 2 recovery.`;
 
                             // Only show progress commentary if we're talking about today
                             if (formatDayOffset(userForecast?.nextZone2Day) !== "Today") {
@@ -2881,55 +3034,95 @@ System Rebound: Your acute performance suppression bottoms out in ${fatigueEnd.t
                 /> */}
 
                 <AdviceUserCard
-                    key={7}
-                    isLoading={isOverallLoading}
-                    theme={theme}
-                    title={`Cardio Fitness Article`}
-                    targetMinutes={0}
-                    accomplishedMinutes={0}
-                    isTracker={false}
-                    blurb={(<span> <strong>What it means if your Cardio Fitness is Low</strong>
-<br/>
-<br/>
-<p>Your cardio fitness levels are something you should definitely pay attention to. Cardio fitness involves vital parts of the body. Your heart, lungs, muscles, blood and blood vessels. This makes it an excellent indicator of your overall fitness.</p>
+                key={7}
+                isLoading={isOverallLoading}
+                theme={theme}
+                title="Cardio Fitness Article"
+                targetMinutes={0}
+                accomplishedMinutes={0}
+                isTracker={false}
+                blurb={(
+                    <div className="space-y-6 text-sm leading-relaxed text-slate-300">
 
-<br/>
-<strong>What is Cardio Fitness and how is it measured?</strong>
-<br/>
-<br/>
-<p>Cardio fitness, or cardiorespiratory fitness, is your body's ability to take in, circulate and use oxygen. It's measured in VO₂ max, which is the maximum amount of oxygen your body is able to use during exercise. The higher your VO₂ max, the more fit you are.
-You should note that predictions are heavily dependent on your age and sex.</p>
+                    {/* Introduction Section */}
+                    <div>
+                        <strong className="block text-base text-white mb-2">
+                        What it means if your Cardio Fitness is Low
+                        </strong>
+                        <p>
+                        Your cardio fitness levels are something you should definitely pay attention to.
+                        Cardio fitness involves vital parts of the body: your heart, lungs, muscles, blood, and blood vessels.
+                        This makes it an excellent indicator of your overall fitness.
+                        </p>
+                    </div>
+                    <br/>
 
-<br/>
-<br/>
-<strong>Why you should be concerned if you're low</strong>
-<br/>
-<br/>
-<p>Low cardio fitness can be a predictor of long term issues like type 2 diabetes, colon cancer, cardiovascular and coronary artery disease, dementia and Alzheimer's. The good news is that if you raise your VO₂ max now and keep it up, you improve your chances of avoiding these issues later.</p>
-<br/>
-<br/>
+                    {/* Measurement Definition */}
+                    <div>
+                        <strong className="block text-base text-white mb-2">
+                        What is Cardio Fitness and how is it measured?
+                        </strong>
+                        <p>
+                        Cardio fitness, or cardiorespiratory fitness, is your body's ability to take in, circulate, and use oxygen.
+                        It's measured in VO₂ max, which is the maximum amount of oxygen your body is able to use during exercise.
+                        The higher your VO₂ max, the more fit you are. You should note that predictions are heavily dependent on your age and sex.
+                        </p>
+                    </div>
+                    <br/>
 
-<strong>Things that could cause cardio fitness to go down</strong>
-<br/>
-<br/>
-<p>It's normal for VO₂ max to decrease as you get older. Other factors that can also cause it to decline include: Becoming pregnant, Medications or conditions that limit your heart rate, A significant injury or long term illness.</p>
+                    {/* Health Risk Warnings */}
+                    <div>
+                        <strong className="block text-base text-white mb-2">
+                        Why you should be concerned if you're low
+                        </strong>
+                        <p>
+                        Low cardio fitness can be a predictor of long term issues like type 2 diabetes, colon cancer,
+                        cardiovascular and coronary artery disease, dementia, and Alzheimer's. The good news is that if you raise your
+                        VO₂ max now and keep it up, you improve your chances of avoiding these issues later.
+                        </p>
+                    </div>
+                    <br/>
 
-<br/>
-<br/>
-<strong>Improving your cardio fitness</strong>
-<br/>
-<br/>
-<p>Aerobic exercise that raises your heart rate and gets you breathing hard will give you the biggest boost. Like running, cycling or high-intensity interval training. And even just adding a few hills to your daily walk can help.</p>
+                    {/* Decline Causes */}
+                    <div>
+                        <strong className="block text-base text-white mb-2">
+                        Things that could cause cardio fitness to go down
+                        </strong>
+                        <p>
+                        It's normal for VO₂ max to decrease as you get older. Other factors that can also cause it to decline include:
+                        becoming pregnant, medications or conditions that limit your heart rate, or a significant injury or long-term illness.
+                        </p>
+                    </div>
+                    <br/>
 
-<br/>
-<br/>
-<strong>When to talk to your Doctor</strong>
-<br/>
-<br/>
-<p>If your VO₂ max is in the low range and you're considering a big change in your exercise routine, you may want to discuss it with your doctor first. Especially if you think an underlying condition could be the cause. Significant changes in any vital sign can indicate a change in your overall health that's worth bringing up with your doctor. </p>
+                    {/* Improvement Tips */}
+                    <div>
+                        <strong className="block text-base text-white mb-2">
+                        Improving your cardio fitness
+                        </strong>
+                        <p>
+                        Aerobic exercise that raises your heart rate and gets you breathing hard will give you the biggest boost.
+                        Activities like running, cycling, or high-intensity interval training are great options. Even just adding a few
+                        hills to your daily walk can help.
+                        </p>
+                    </div>
+                    <br/>
 
+                    {/* Medical Disclaimer */}
+                    <div className="p-4 bg-slate-800/40 rounded-lg border border-slate-700/50">
+                        <strong className="block text-base text-rose-400 mb-2">
+                        When to talk to your Doctor
+                        </strong>
+                        <p className="text-xs text-slate-400">
+                        If your VO₂ max is in the low range and you're considering a big change in your exercise routine, you may want to
+                        discuss it with your doctor first, especially if you think an underlying condition could be the cause. Significant
+                        changes in any vital sign can indicate a change in your overall health that's worth bringing up with your doctor.
+                        </p>
+                    </div>
+                    <br/>
 
-</span>)}
+                    </div>
+                )}
                 />
 
                 {/* <WeeklyVolumeTracker
@@ -2970,6 +3163,40 @@ You should note that predictions are heavily dependent on your age and sex.</p>
                         </span>
                     }
                 />
+
+                {/* <WorkoutBuddyMatcher
+                    userScore={12}
+                    userMetrics={{
+                        w1: 3.346,
+                        k1: 0.275,
+                    }}
+                    friends={[
+                        {
+                        id: 'friend_01',
+                        name: 'Sarah Connor',
+                        avatar: '/avatars/sarah.jpg',
+                        readinessScore: 78,
+                        w1: 3.521,
+                        k1: 0.268,
+                        },
+                        {
+                        id: 'friend_02',
+                        name: 'John Doe',
+                        avatar: '/avatars/john.jpg',
+                        readinessScore: 42,
+                        w1: 2.110,
+                        k1: 0.290,
+                        },
+                        {
+                        id: 'friend_03',
+                        name: 'Alex Mercer',
+                        avatar: '/avatars/alex.jpg',
+                        readinessScore: 68,
+                        w1: 5.890, // Elite fitness athlete (will lower match % due to fitness delta)
+                        k1: 0.310,
+                        }
+                    ]}
+                /> */}
 
                 <AdviceUserCard
                     key={9}

@@ -123,7 +123,7 @@
 }
 
 .admin-user-card__donut-container.is-completed .admin-user-card__donut-label {
-  fill: var(--accent-2, #0a84ff);
+  fill: var(--accent-2, #fff);
 }
 
 /* Clickable indicator for the normal card */

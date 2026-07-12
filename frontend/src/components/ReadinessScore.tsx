@@ -1,53 +1,43 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import './AdviceUserCard.css';
+import { ReadinessTrendGraph } from './ReadinessTrendGraph.tsx';
+import { calculateReadinessScore } from './readinessUtils.ts';
+
+export interface DailyReadinessData {
+  dayName: string;      // e.g., "Mon", "Tue"
+  dateString: string;    // e.g., "July 14"
+  score: number;         // 0 to 100
+  workoutType?: 'HIIT' | 'Zone 2' | 'Walk' | 'None';
+}
 
 interface ReadinessScoreProps {
     theme: "light" | "dark";
     isLoading: boolean;
-    w1: number;       // Chronic Fitness Accumulator
-    w2: number;       // Acute Fatigue Accumulator
-    k1: number;       // Fitness Gain Parameter
-    k2: number;       // Fatigue Penalty Parameter
+    fitnessSignal: number;   // Chronic Fitness Accumulator
+    fatigueSignal: number;   // Acute Fatigue Accumulator
+    k1: number;              // Fitness Gain Parameter
+    k2: number;              // Fatigue Penalty Parameter
     imageUrl?: string;
-    daysSinceLastHiit;
-    daysSinceLastZone2;
+    daysHiit;
+    daysZone2;
+    data: DailyReadinessData[];
 }
 
 export const ReadinessScore: React.FC<ReadinessScoreProps> = ({
     theme,
     isLoading,
-    w1,
-    w2,
+    fitnessSignal,
+    fatigueSignal,
     k1,
     k2,
     imageUrl,
-    daysSinceLastHiit = 1,  // e.g., Yesterday = 1 day ago
-    daysSinceLastZone2 = 2  // e.g., 2 days ago
+    daysHiit,
+    daysZone2,
+    data
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-
-    // 1. Compute raw physical Banister Training Stress Balance
-    const fitnessSignal = w1 * k1;
-    const fatigueSignal = w2 * k2;
-    const tsb = fitnessSignal - fatigueSignal;
-
-    const equilibriumScore = 70;
-    const sensitivityScalar = 4.5;
-    const baseRawScore = equilibriumScore + (tsb * sensitivityScalar);
-    let score = Math.max(0, Math.min(100, Math.round(baseRawScore)));
-
-    let acuteSuppressionPenalty = 0;
-
-    if (daysSinceLastHiit <= 5.0) {
-        // Half-life style decay: Day 1 = 45%, Day 2 = 22.5%, Day 3 = 11.25%
-        acuteSuppressionPenalty = 45 / Math.pow(2, daysSinceLastHiit - 1);
-    } else if (daysSinceLastZone2 <= 2.0) {
-        acuteSuppressionPenalty = 20 / Math.pow(2, daysSinceLastZone2 - 1);
-    }
-
-    // Apply the acute suppression penalty directly to the final score
-    score = Math.max(0, score - acuteSuppressionPenalty);
+    const { score, tsb } = calculateReadinessScore({ fitnessSignal, fatigueSignal, k1, k2 }, { daysHiit, daysZone2 });
 
     // 3. Evaluate 4-Quartile Tier Allocations and prescribe the appropriate workout
     let zoneLabel = "";
@@ -188,11 +178,13 @@ export const ReadinessScore: React.FC<ReadinessScoreProps> = ({
                         )}
 
                         <div className="admin-user-card__body" style={{ display: 'block' }}>
-                            <div className="admin-user-card__blurb admin-user-card__blurb--full">{blurbContent}</div>
+                            <div className="admin-user-card__blurb admin-user-card__blurb--full" style={{ height: 'auto', marginBottom: '24px' }}>{blurbContent}</div>
+                            <ReadinessTrendGraph data={data} />
                         </div>
                         <div className="admin-user-card__footer">
                             <span>Calculated Model Training Stress Balance (TSB): {tsb.toFixed(3)}</span>
                         </div>
+
                     </div>
                 </div>,
                 document.body

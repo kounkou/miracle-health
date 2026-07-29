@@ -100,7 +100,7 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                         callbacks: {
                             label: (ctx) => {
                                 const value = ctx.raw as number | null;
-                                return value !== null ? ` ${value.toFixed(1)} mL/kg/min` : " —";
+                                return value !== null ? ` ${value.toFixed(2)} mL/kg/min` : " —";
                             },
                         },
                         titleColor: textColor,
@@ -155,7 +155,7 @@ export const CardioUserCard: React.FC<UserCardProps> = ({ forecast, theme, title
                 )}
                 {!isLoading && forecast.peakVo2 !== null && forecast.peakVo2 !== undefined && (
                     <span className="admin-user-card__peak">
-                        {forecast.peakVo2.toFixed(1)} VO₂max
+                        {forecast.peakVo2.toFixed(2)} VO₂max
                     </span>
                 )}
             </div>

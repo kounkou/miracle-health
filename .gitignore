@@ -3,3 +3,6 @@ node_modules/.package-lock.json
 package-lock.json
 .trunk
 dist
+# Xcode user-specific settings
+xcuserdata/
+*.xcuserstate
